@@ -16,7 +16,6 @@ repositories {
         isAllowInsecureProtocol = true
         url = uri("http://repo.yakclient.net/snapshots")
     }
-//    mavenLocal()
     maven {
         name = "Durgan McBroom GitHub Packages"
         url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
