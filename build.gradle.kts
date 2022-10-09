@@ -12,11 +12,11 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-//    maven {
-//        isAllowInsecureProtocol = true
-//        url = uri("http://repo.yakclient.net/snapshots")
-//    }
-    mavenLocal()
+    maven {
+        isAllowInsecureProtocol = true
+        url = uri("http://repo.yakclient.net/snapshots")
+    }
+//    mavenLocal()
     maven {
         name = "Durgan McBroom GitHub Packages"
         url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
@@ -144,7 +144,7 @@ allprojects {
 
                 isAllowInsecureProtocol = true
 
-                url = uri("http://repo.yakclient.net/$repo")
+                url = uri("http://maven.yakclient.net/$repo")
 
                 credentials {
                     username = project.findProperty("maven-user") as String

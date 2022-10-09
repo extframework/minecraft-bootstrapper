@@ -52,7 +52,6 @@ task<Jar>("javadocJar") {
 publishing {
     publications {
         create<MavenPublication>("1.19-maven") {
-//            from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
             artifact(tasks["jar"])
