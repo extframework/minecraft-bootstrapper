@@ -7,15 +7,20 @@ import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySet
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.required
+import net.yakclient.archives.ArchiveReference
 import net.yakclient.boot.AppInstance
 import net.yakclient.boot.Boot
 import net.yakclient.boot.BootApplication
 import net.yakclient.boot.maven.MavenDataAccess
 import net.yakclient.boot.store.CachingDataStore
+import net.yakclient.common.util.CAST
+import net.yakclient.common.util.immutableLateInit
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
+import net.yakclient.common.util.resource.ProvidedResource
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.instrument.ClassDefinition
 import java.nio.channels.Channels
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,6 +38,33 @@ private enum class MinecraftRepositoryType(
 }
 
 public class MinecraftBootstrapper : BootApplication {
+    private val updatedClasses: MutableMap<String, ByteArray> = HashMap()
+    private val instrumentation = net.bytebuddy.agent.ByteBuddyAgent.install()
+    internal var minecraftRef: MinecraftReference by immutableLateInit()
+
+    init {
+        checkNotInitialized()
+
+        instance = this
+        MinecraftMixinAccess.registerListener { name, bytes ->
+            updatedClasses[name] = bytes
+        }
+    }
+
+    internal companion object {
+        var initialized: Boolean = false
+        var instance: MinecraftBootstrapper by immutableLateInit()
+
+        fun checkNotInitialized() {
+            check(!initialized) { "Minecraft already initialized" }
+
+        }
+
+        fun checkInitialized() {
+            check(initialized) { "Minecraft not initialized yet!" }
+        }
+    }
+
     override fun newInstance(args: Array<String>): AppInstance {
         val parser = ArgParser("minecraft-bootstrap", skipExtraArguments = true)
 
@@ -81,6 +113,33 @@ public class MinecraftBootstrapper : BootApplication {
 
         val provider = handler.get(version, gameProviderRepositoryType.settingsProvider(gameProviderRepository))
 
-        return provider.get(version, Path.of(gameCachePath))
+        minecraftRef = provider.getReference(version, Path.of(gameCachePath))
+
+        updatedClasses.forEach {
+            val oldEntry = minecraftRef.archive.reader[it.key]!!
+            minecraftRef.archive.writer.put(
+                ArchiveReference.Entry(
+                    it.key,
+                    ProvidedResource(
+                        oldEntry.resource.uri
+                    ) { it.value },
+                    oldEntry.isDirectory,
+                    oldEntry.handle
+                )
+            )
+        }
+        @Suppress(CAST)
+        val get = (provider as MinecraftProvider<MinecraftReference>).get(minecraftRef)
+
+        MinecraftMixinAccess.registerListener { name, bytes ->
+            instrumentation.redefineClasses(
+                ClassDefinition(
+                    get::class.java.classLoader.loadClass(name),
+                    bytes
+                )
+            )
+        }
+
+        return get
     }
 }

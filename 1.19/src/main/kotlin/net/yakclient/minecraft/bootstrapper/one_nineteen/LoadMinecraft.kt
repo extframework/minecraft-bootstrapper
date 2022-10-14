@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
 import net.yakclient.archives.ArchiveHandle
+import net.yakclient.archives.ArchiveReference
 import net.yakclient.archives.Archives
 import net.yakclient.boot.loader.ArchiveSourceProvider
 import net.yakclient.boot.loader.DelegatingSourceProvider
@@ -16,6 +17,7 @@ import net.yakclient.common.util.copyTo
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
 import net.yakclient.common.util.resource.SafeResource
+import net.yakclient.minecraft.bootstrapper.MinecraftReference
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -25,11 +27,47 @@ private infix fun SafeResource.copyToBlocking(to: Path): Path = runBlocking { th
 
 private const val LAUNCHER_META = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
 
+//internal fun loadMinecraftRef(
+//    mcVersion: String,
+//    path: Path,
+//    store: DataStore<String, ClientManifest>
+//) : MinecraftReference
+//
+public data class Minecraft_1_19_Reference(
+    override val archive: ArchiveReference,
+    val dependencies: List<ArchiveReference>,
+    val manifest: ClientManifest,
+) : MinecraftReference
+
 internal fun loadMinecraft(
+    reference: Minecraft_1_19_Reference,
+): Pair<ArchiveHandle, ClientManifest> {
+    val (mcReference, minecraftDependencies, manifest) = reference
+
+    val mcLoader = IntegratedLoader(
+        sp = DelegatingSourceProvider(
+            minecraftDependencies.map(::ArchiveSourceProvider) + ArchiveSourceProvider(
+                mcReference
+            )
+        ),
+        parent = ClassLoader.getSystemClassLoader()
+    )
+
+    // Resolves reference
+    val minecraft = Archives.resolve(
+        mcReference,
+        mcLoader,
+        Archives.Resolvers.ZIP_RESOLVER,
+    )
+
+    return minecraft.archive to manifest
+}
+
+internal fun loadMinecraftRef(
     mcVersion: String,
     path: Path,
     store: DataStore<String, ClientManifest>,
-): Pair<ArchiveHandle, ClientManifest> {
+): Minecraft_1_19_Reference {
     // Convert an operating system name to its type
     fun String.osNameToType(): OsType? = when (this) {
         "linux" -> OsType.UNIX
@@ -38,17 +76,9 @@ internal fun loadMinecraft(
         else -> null
     }
 
-    // Convert an operating system type to its name
-    fun OsType.toOsName(): String = when (this) {
-        OsType.WINDOWS -> "windows"
-        OsType.OS_X -> "osx"
-        OsType.UNIX -> "linux"
-    }
-
     val versionPath = path resolve mcVersion
     val minecraftPath = versionPath resolve "minecraft-${mcVersion}.jar"
     val mappingsPath = versionPath resolve "minecraft-mappings-${mcVersion}.txt"
-
 
     // Get manifest or download manifest
     val manifest = store[mcVersion] ?: run {
@@ -100,7 +130,6 @@ internal fun loadMinecraft(
 
 
     val libPath = versionPath resolve "lib"
-    val nativesPath = libPath resolve "lib" resolve "natives"
 
     // Load libraries, from manifest
     val libraries: List<ClientLibrary> = manifest.libraries.filter { lib ->
@@ -137,28 +166,5 @@ internal fun loadMinecraft(
 
     // Loads minecraft reference
     val mcReference = Archives.find(minecraftPath, Archives.Finders.ZIP_FINDER)
-
-    val mcLoader = IntegratedLoader(
-        sp = DelegatingSourceProvider(
-            minecraftDependencies.map(::ArchiveSourceProvider) + ArchiveSourceProvider(
-                mcReference
-            )
-        ),
-        parent = ClassLoader.getSystemClassLoader()
-    )
-
-    // Resolves reference
-    val minecraft = Archives.resolve(
-        mcReference,
-        mcLoader,
-        Archives.Resolvers.ZIP_RESOLVER,
-    )
-
-    // Opens all dependency packages to minecraft
-//    results.forEach { result ->
-//        result.archive.packages.forEach { p ->
-//            result.controller.addOpens(result.module, p, mcLoader.unnamedModule)
-//        }
-//    }
-    return minecraft.archive to manifest
+    return Minecraft_1_19_Reference(mcReference, minecraftDependencies, manifest)
 }

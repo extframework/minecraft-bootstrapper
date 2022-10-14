@@ -58,4 +58,6 @@ class TestMinecraftProviderLoading {
         val provider = handler.get("1.19", SimpleMavenRepositorySettings.local())
         println(provider)
     }
+
+
 }

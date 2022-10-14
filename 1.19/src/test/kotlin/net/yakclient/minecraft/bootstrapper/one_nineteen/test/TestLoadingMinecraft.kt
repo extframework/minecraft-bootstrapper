@@ -5,6 +5,7 @@ import net.yakclient.common.util.resolve
 import net.yakclient.minecraft.bootstrapper.one_nineteen.MCManifestDataAccess
 import net.yakclient.minecraft.bootstrapper.one_nineteen.loadMinecraft
 import java.nio.file.Path
+import java.util.Arrays
 import kotlin.test.Test
 
 class TestLoadingMinecraft {
@@ -20,5 +21,19 @@ class TestLoadingMinecraft {
 
         cls.getMethod("main", Array<String>::class.java)
             .invoke(null, arrayOf("--accessToken", "", "--version", "1.18.2"))
+    }
+
+    @Test
+    fun `Test arg parse`() {
+        println(
+            Arrays.toString(ArgParser.translateCommandline(
+                "--hello \"asdf\" --test-other-thing \"adsfasdf\""
+            ))
+        )
+    }
+
+    @Test
+    fun `Test mc arg parse`() {
+
     }
 }

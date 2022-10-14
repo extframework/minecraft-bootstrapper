@@ -29,7 +29,7 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
     private val archiveProvider = JpmResolutionProvider
 
 
-    public fun get(version: String, settings: R): MinecraftProvider {
+    public fun get(version: String, settings: R): MinecraftProvider<*> {
         val req: T = requestBuilder(version)
 
         val data = store[req] ?: run {
@@ -95,7 +95,7 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
         val clazz = archive.classloader.loadClass(providerClassName)
 
-        return clazz.getConstructor().newInstance() as? MinecraftProvider
+        return clazz.getConstructor().newInstance() as? MinecraftProvider<*>
             ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
     }
 }

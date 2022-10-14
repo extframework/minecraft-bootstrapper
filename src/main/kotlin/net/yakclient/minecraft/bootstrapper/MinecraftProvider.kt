@@ -2,6 +2,8 @@ package net.yakclient.minecraft.bootstrapper
 
 import java.nio.file.Path
 
-public interface MinecraftProvider {
-    public fun get(version: String, dumpPath: Path) : MinecraftAppInstance
+public interface MinecraftProvider<T: MinecraftReference> {
+    public fun getReference(version: String, dumpPath: Path) : T
+
+    public fun get(ref: T) : MinecraftAppInstance
 }

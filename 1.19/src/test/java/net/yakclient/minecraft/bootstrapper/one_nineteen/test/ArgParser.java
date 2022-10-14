@@ -1,53 +1,13 @@
-package net.yakclient.minecraft.bootstrapper.one_nineteen;
-
-
-import net.yakclient.archives.ArchiveHandle;
-import net.yakclient.minecraft.bootstrapper.MinecraftAppInstance;
+package net.yakclient.minecraft.bootstrapper.one_nineteen.test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-public class Minecraft_1_19_App implements MinecraftAppInstance {
-    private final ArchiveHandle handle;
-    private final ClientManifest manifest;
-
-    public Minecraft_1_19_App(ArchiveHandle handle, ClientManifest manifest) {
-        this.handle = handle;
-        this.manifest = manifest;
-    }
-
-    @Override
-    public void start(String[] args) {
-        try {
-            final var i = IntStream.range(0, args.length)
-                    .filter(it -> Objects.equals(args[it], "--minecraft-args"))
-                    .findFirst();
-
-            final Supplier<String[]> translateArgs = () -> {
-                final int asInt = i.getAsInt();
-
-                if (asInt + 1 > args.length)
-                    throw new IllegalArgumentException("Bad args, flag --minecraft-args provided but no args were given. Complete argument list was '" + Arrays.toString(args) + "'");
-
-                return translateCommandline(args[asInt + 1]);
-            };
-
-            final var mcArgs = i.isPresent() ? translateArgs.get() : new String[]{};
-
-            final var cls = handle.getClassloader().loadClass(manifest.getMainClass());
-
-            cls.getMethod("main", String[].class).invoke(null, new Object[]{mcArgs});
-        } catch (ClassNotFoundException | InvocationTargetException | NoSuchMethodException |
-                 IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
+public class ArgParser {
     /**
      * [code borrowed from ant.jar]
      * Crack a command line.
@@ -56,13 +16,13 @@ public class Minecraft_1_19_App implements MinecraftAppInstance {
      * @return the command line broken into strings.
      * An empty or null toProcess parameter results in a zero sized array.
      */
-    private static String[] translateCommandline(String toProcess) {
+    public static String[] translateCommandline(String toProcess) {
         if (toProcess == null || toProcess.length() == 0) {
             //no command? no string
             return new String[0];
         }
-        // parse with a simple finite state machine
 
+        // parse with a simple finite state machine
         final int normal = 0;
         final int inQuote = 1;
         final int inDoubleQuote = 2;

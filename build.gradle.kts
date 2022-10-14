@@ -16,6 +16,7 @@ repositories {
         isAllowInsecureProtocol = true
         url = uri("http://repo.yakclient.net/snapshots")
     }
+    mavenLocal()
     maven {
         name = "Durgan McBroom GitHub Packages"
         url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
@@ -33,6 +34,7 @@ repositories {
 dependencies {
     implementation("net.yakclient:common-util:1.0-SNAPSHOT")
 
+    implementation("net.yakclient.plugins:mixin-plugin:1.0-SNAPSHOT")
     implementation("io.arrow-kt:arrow-core:1.1.2")
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
     implementation("net.yakclient:boot:1.0-SNAPSHOT") {
@@ -49,6 +51,8 @@ dependencies {
     implementation("com.durganmcbroom:artifact-resolver-simple-maven:1.0-SNAPSHOT") {
         isChanging = true
     }
+    implementation("net.bytebuddy:byte-buddy-agent:1.12.18")
+
 }
 
 task<Jar>("sourcesJar") {
