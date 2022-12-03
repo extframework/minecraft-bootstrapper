@@ -1,63 +1,34 @@
 package net.yakclient.minecraft.bootstrapper.test
 
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
-import net.yakclient.boot.createMaven
-import net.yakclient.boot.maven.MavenDataAccess
-import net.yakclient.boot.store.CachingDataStore
-import net.yakclient.common.util.make
-import net.yakclient.common.util.resolve
-import net.yakclient.minecraft.bootstrapper.MinecraftProviderHandler
+import net.yakclient.boot.component.ComponentLoadContext
+import net.yakclient.boot.initMaven
+import net.yakclient.boot.withBootDependencies
+import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapper
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.channels.Channels
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.logging.Level
 import kotlin.test.Test
 
 class TestMinecraftProviderLoading {
     @Test
-    fun `Test 1_19 load`() {
-        val cacheLocation = System.getProperty("user.dir")
-        val dependencyGraph = createMaven(cacheLocation) { }
-        val handler = MinecraftProviderHandler(
-            { request, resource ->
-                val descriptor by request::descriptor
+    fun `Test 1_19_2 load`() {
+        val cacheLocation = "${System.getProperty("user.dir")}${File.separator}cache"
 
-                val jarName = "${descriptor.artifact}-${descriptor.version}.jar"
-                val jarPath = Path.of(cacheLocation) resolve descriptor.group.replace(
-                    '.',
-                    File.separatorChar
-                ) resolve descriptor.artifact resolve descriptor.version resolve jarName
+        val bootstrapper = MinecraftBootstrapper()
 
-                if (!Files.exists(jarPath)) {
-                    Channels.newChannel(resource.open()).use { cin ->
-                        jarPath.make()
-                        FileOutputStream(jarPath.toFile()).use { fout ->
-                            fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
-                        }
-                    }
-                }
+        bootstrapper.onEnable(
+            ComponentLoadContext(
+                mapOf(
+                    "version" to "1.19.2",
+                    "repository" to "/Users/durgan/.m2/repository",
+                    "repositoryType" to "LOCAL",
+                    "cache" to cacheLocation,
+                    "providerVersionMappings" to "file:///Users/durgan/IdeaProjects/durganmcbroom/minecraft-bootstrapper/cache/version-mappings.json",
+                    "mcArgs" to "--version;1.19.2;--accessToken;"
+                ),
+                initMaven(cacheLocation, withBootDependencies { })
+            ),
+        )
 
-                jarPath
-            },
-            CachingDataStore(MavenDataAccess(Path.of(cacheLocation))),
-            dependencyGraph
-        ) {
-            val descriptor =
-                SimpleMavenDescriptor("net.yakclient.minecraft", "minecraft-provider-$it", "1.0-SNAPSHOT", null)
-
-            SimpleMavenArtifactRequest(
-                descriptor,
-                includeScopes = setOf("compile")
-            )
-        }
-
-        val provider = handler.get("1.19", SimpleMavenRepositorySettings.local())
-        println(provider)
+        bootstrapper.minecraftHandler.loadMinecraft()
+        bootstrapper.minecraftHandler.startMinecraft()
     }
-
-
 }

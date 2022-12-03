@@ -5,13 +5,13 @@ import arrow.core.identity
 import com.durganmcbroom.artifact.resolver.*
 import net.yakclient.archives.JpmArchives
 import net.yakclient.boot.archive.JpmResolutionProvider
+import net.yakclient.boot.archive.handleOrChildren
 import net.yakclient.boot.dependency.DependencyData
 import net.yakclient.boot.dependency.DependencyGraph
-import net.yakclient.boot.dependency.handleOrChildren
 import net.yakclient.boot.loader.ArchiveSourceProvider
 import net.yakclient.boot.loader.IntegratedLoader
 import net.yakclient.boot.store.DataStore
-import net.yakclient.boot.toSafeResource
+import net.yakclient.boot.util.toSafeResource
 import net.yakclient.common.util.resource.SafeResource
 import java.nio.file.Path
 import java.util.*
@@ -46,13 +46,16 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
             ref.children.forEach {
                 for (s in it.candidates) {
-                    val candidateSettings = (repository.stubResolver.repositoryResolver as RepositoryStubResolver<RepositoryStub, R>).resolve(s).orNull() ?: continue
+                    val candidateSettings =
+                        (repository.stubResolver.repositoryResolver as RepositoryStubResolver<RepositoryStub, R>).resolve(
+                            s
+                        ).orNull() ?: continue
 
-                    if (dependencyGraph.loaderOf(candidateSettings).load(it.request as T).isRight()) break
+                    if (dependencyGraph.cacherOf(candidateSettings).cache(it.request as T).isRight()) break
                 }
             }
 
-            val jarPath =  archiveWriter(
+            val jarPath = archiveWriter(
                 req,
                 checkNotNull(ref.metadata.resource) { "Archive cannot be null for provider version: '$version'." }.toSafeResource()
             )
@@ -77,12 +80,15 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
         val resource = checkNotNull(data.archive) { "Archive cannot be null for provider version: '$version'." }
 
-        val archive = archiveProvider.resolve(resource, {
-            IntegratedLoader(
-                sp = ArchiveSourceProvider(it),
-                parent = this::class.java.classLoader
-            )
-        }, children.flatMapTo(HashSet()) { it.handleOrChildren() } + JpmArchives.moduleToArchive(this::class.java.module))
+        val archive = archiveProvider.resolve(
+            resource,
+            {
+                IntegratedLoader(
+                    sp = ArchiveSourceProvider(it),
+                    parent = this::class.java.classLoader
+                )
+            },
+            children.flatMapTo(HashSet()) { it.handleOrChildren() } + JpmArchives.moduleToArchive(this::class.java.module))
             .fold({ throw it }, ::identity).archive
 
         val properties =

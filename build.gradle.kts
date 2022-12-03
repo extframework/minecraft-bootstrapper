@@ -7,34 +7,13 @@ plugins {
 
 }
 
-group = "net.yakclient.minecraft"
-version = "1.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-    maven {
-        isAllowInsecureProtocol = true
-        url = uri("http://repo.yakclient.net/snapshots")
-    }
-    mavenLocal()
-    maven {
-        name = "Durgan McBroom GitHub Packages"
-        url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
-        credentials {
-            username = project.findProperty("dm.gpr.user") as? String
-                ?: throw IllegalArgumentException("Need a Github package registry username!")
-            password = project.findProperty("dm.gpr.key") as? String
-                ?: throw IllegalArgumentException("Need a Github package registry key!")
-        }
-    }
-}
-
-
+group = "net.yakclient.components"
 
 dependencies {
-    implementation("net.yakclient:common-util:1.0-SNAPSHOT")
+    implementation("net.yakclient:archives-mixin:1.0-SNAPSHOT") {
+        isChanging = true
+    }
 
-    implementation("net.yakclient.plugins:mixin-plugin:1.0-SNAPSHOT")
     implementation("io.arrow-kt:arrow-core:1.1.2")
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
     implementation("net.yakclient:boot:1.0-SNAPSHOT") {
@@ -52,7 +31,10 @@ dependencies {
         isChanging = true
     }
     implementation("net.bytebuddy:byte-buddy-agent:1.12.18")
-
+    implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
+        isChanging = true
+    }
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
 }
 
 task<Jar>("sourcesJar") {
@@ -71,6 +53,7 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
+            artifact("${sourceSets.main.get().resources.srcDirs.first().absoluteFile}${File.separator}component-model.json").classifier = "component-model"
 
             artifactId = "minecraft-bootstrapper"
 
@@ -118,12 +101,11 @@ allprojects {
     apply(plugin = "org.jetbrains.dokka")
     apply(plugin = "org.javamodularity.moduleplugin")
 
-    group = "net.yakclient"
     version = "1.0-SNAPSHOT"
 
     repositories {
-        mavenCentral()
         mavenLocal()
+        mavenCentral()
         maven {
             name = "Durgan McBroom GitHub Packages"
             url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")

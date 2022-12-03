@@ -7,9 +7,12 @@ module yakclient.minecraft.bootstrapper {
     requires durganmcbroom.artifact.resolver;
     requires arrow.core.jvm;
     requires yakclient.common.util;
-    requires yakclient.mixin.plugin;
     requires net.bytebuddy.agent;
     requires java.instrument;
+    requires com.fasterxml.jackson.databind;
+    requires com.fasterxml.jackson.kotlin;
+    requires yakclient.archives.mixin;
+    requires java.logging;
 
     exports net.yakclient.minecraft.bootstrapper;
 }

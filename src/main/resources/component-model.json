@@ -1,0 +1,30 @@
+{
+  "name": "minecraft-bootstrapper",
+  "packaging": "jar",
+  "entrypoint": "net.yakclient.minecraft.bootstrapper.MinecraftBootstrapper",
+  "children": [  ],
+  "dependencies": [
+    {
+      "request": {
+        "descriptor": "net.yakclient:archives-mixin:1.0-SNAPSHOT"
+      },
+      "repository": {
+        "type": "simple-maven",
+        "settings": {
+          "location": "http://maven.yakclient.net/snapshots"
+        }
+      }
+    },
+    {
+      "request": {
+        "descriptor": "net.bytebuddy:byte-buddy-agent:1.12.18"
+      },
+      "repository": {
+        "type": "simple-maven",
+        "settings": {
+          "location": "https://repo.maven.apache.org/maven2"
+        }
+      }
+    }
+  ]
+}
