@@ -1,4 +1,4 @@
-package net.yakclient.minecraft.provider._default
+package net.yakclient.minecraft.provider.def
 
 import net.yakclient.archives.ArchiveHandle
 import net.yakclient.boot.store.DelegatingDataStore

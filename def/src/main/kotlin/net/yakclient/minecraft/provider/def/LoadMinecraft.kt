@@ -1,4 +1,4 @@
-package net.yakclient.minecraft.provider._default
+package net.yakclient.minecraft.provider.def
 
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
+import net.yakclient.archive.mapper.MappedArchive
+import net.yakclient.archive.mapper.Parsers
 import net.yakclient.archives.ArchiveHandle
 import net.yakclient.archives.ArchiveReference
 import net.yakclient.archives.Archives
@@ -22,6 +24,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Path
+import kotlin.io.path.inputStream
 
 private infix fun SafeResource.copyToBlocking(to: Path): Path = runBlocking { this@copyToBlocking copyTo to }
 
@@ -31,7 +34,7 @@ public data class DefaultMinecraftReference(
     override val version: String,
     override val archive: ArchiveReference,
     val dependencies: List<ArchiveReference>,
-    val manifest: ClientManifest,
+    val manifest: ClientManifest, override val mappings: MappedArchive,
 ) : MinecraftReference
 
 internal fun loadMinecraft(
@@ -161,5 +164,11 @@ internal fun loadMinecraftRef(
 
     // Loads minecraft reference
     val mcReference = Archives.find(minecraftPath, Archives.Finders.ZIP_FINDER)
-    return DefaultMinecraftReference(mcVersion, mcReference, minecraftDependencies, manifest)
+    return DefaultMinecraftReference(
+        mcVersion,
+        mcReference,
+        minecraftDependencies,
+        manifest,
+        Parsers[Parsers.PRO_GUARD]!!.parse(mappingsPath.inputStream())
+    )
 }

@@ -1,4 +1,4 @@
-package net.yakclient.minecraft.provider._default
+package net.yakclient.minecraft.provider.def
 
 import java.util.*
 

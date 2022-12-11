@@ -61,8 +61,6 @@ public class MinecraftHandler<T : MinecraftReference>(
         updatedMixins.add(to)
     }
 
-
-
     public fun writeAll() {
         val mixins: Set<Map.Entry<String, MutableList<MixinMetadata<*>>>> =
             mixins.filter { updatedMixins.contains(it.key) }.entries

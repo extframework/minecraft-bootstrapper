@@ -35,6 +35,7 @@ dependencies {
         isChanging = true
     }
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
+    implementation("net.yakclient:archive-mapper:1.0-SNAPSHOT")
 }
 
 task<Jar>("sourcesJar") {

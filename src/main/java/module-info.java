@@ -13,6 +13,7 @@ module yakclient.minecraft.bootstrapper {
     requires com.fasterxml.jackson.kotlin;
     requires yakclient.archives.mixin;
     requires java.logging;
+    requires yakclient.archive.mapper;
 
     exports net.yakclient.minecraft.bootstrapper;
 }

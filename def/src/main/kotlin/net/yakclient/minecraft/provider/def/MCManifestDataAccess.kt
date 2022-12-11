@@ -1,4 +1,4 @@
-package net.yakclient.minecraft.provider._default
+package net.yakclient.minecraft.provider.def
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule

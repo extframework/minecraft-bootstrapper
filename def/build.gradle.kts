@@ -51,12 +51,12 @@ task<Jar>("javadocJar") {
 
 publishing {
     publications {
-        create<MavenPublication>("default-maven") {
+        create<MavenPublication>("def-maven") {
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
             artifact(tasks["jar"])
 
-            artifactId = "minecraft-provider-default"
+            artifactId = "minecraft-provider-def"
 
             pom {
                 name.set("Minecraft Bootstrapper default")

@@ -1,4 +1,4 @@
-open module yakclient.minecraft.provider._default {
+module yakclient.minecraft.provider.def {
     requires kotlin.stdlib;
     requires com.fasterxml.jackson.databind;
     requires yakclient.common.util;
@@ -9,6 +9,8 @@ open module yakclient.minecraft.provider._default {
     requires yakclient.boot;
     requires durganmcbroom.artifact.resolver.simple.maven;
     requires kotlinx.coroutines.core.jvm;
+    requires yakclient.archive.mapper;
 
-    exports net.yakclient.minecraft.provider._default;
+    exports net.yakclient.minecraft.provider.def;
+    opens net.yakclient.minecraft.provider.def to com.fasterxml.jackson.databind;
 }
