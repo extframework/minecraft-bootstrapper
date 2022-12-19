@@ -1,6 +1,7 @@
 package net.yakclient.minecraft.bootstrapper
 
 import net.bytebuddy.agent.ByteBuddyAgent
+import net.yakclient.archives.ArchiveHandle
 import net.yakclient.archives.Archives
 import net.yakclient.archives.mixin.MixinInjection
 import net.yakclient.archives.transform.AwareClassWriter
@@ -23,8 +24,8 @@ public class MinecraftHandler<T : MinecraftReference>(
     private val args: Array<String>
 ) {
     public val minecraftReference: T = provider.getReference(version, cache)
-    public lateinit var handle: MinecraftHandle
-        private set
+    private lateinit var handle: MinecraftHandle
+    public val archive: ArchiveHandle by lazy {handle.archive}
     public var isLoaded: Boolean = false
         private set
     public var hasStarted: Boolean = false
