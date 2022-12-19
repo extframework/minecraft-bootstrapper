@@ -23,7 +23,8 @@ public class MinecraftHandler<T : MinecraftReference>(
     private val args: Array<String>
 ) {
     public val minecraftReference: T = provider.getReference(version, cache)
-    private lateinit var handle: MinecraftHandle
+    public lateinit var handle: MinecraftHandle
+        private set
     public var isLoaded: Boolean = false
         private set
     public var hasStarted: Boolean = false
