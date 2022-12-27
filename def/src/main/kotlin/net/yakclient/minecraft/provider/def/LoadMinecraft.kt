@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
-import net.yakclient.archive.mapper.MappedArchive
-import net.yakclient.archive.mapper.Parsers
+import net.yakclient.archive.mapper.ArchiveMapping
+import net.yakclient.archive.mapper.parsers.ProGuardMappingParser
 import net.yakclient.archives.ArchiveHandle
 import net.yakclient.archives.ArchiveReference
 import net.yakclient.archives.Archives
@@ -34,7 +34,7 @@ public data class DefaultMinecraftReference(
     override val version: String,
     override val archive: ArchiveReference,
     val dependencies: List<ArchiveReference>,
-    val manifest: ClientManifest, override val mappings: MappedArchive,
+    val manifest: ClientManifest, override val mappings: ArchiveMapping,
 ) : MinecraftReference
 
 internal fun loadMinecraft(
@@ -169,6 +169,6 @@ internal fun loadMinecraftRef(
         mcReference,
         minecraftDependencies,
         manifest,
-        Parsers[Parsers.PRO_GUARD]!!.parse(mappingsPath.inputStream())
+        ProGuardMappingParser.parse(mappingsPath.inputStream())
     )
 }

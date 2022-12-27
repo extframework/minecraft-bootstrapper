@@ -15,7 +15,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
     implementation("net.yakclient:archives:1.0-SNAPSHOT")
     implementation(project(":"))
-    implementation("net.yakclient:archive-mapper:1.0-SNAPSHOT") {
+    implementation("net.yakclient:archive-mapper:1.1-SNAPSHOT") {
         isChanging = true
     }
     implementation("net.yakclient:boot:1.0-SNAPSHOT") {
