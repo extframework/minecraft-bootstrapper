@@ -105,7 +105,6 @@ allprojects {
     version = "1.0-SNAPSHOT"
 
     repositories {
-        mavenLocal()
         mavenCentral()
         maven {
             name = "Durgan McBroom GitHub Packages"
