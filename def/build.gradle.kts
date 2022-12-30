@@ -83,7 +83,7 @@ publishing {
                     val archiveMapperNode = dependenciesNode.appendNode("dependency")
                     archiveMapperNode.appendNode("groupId", "net.yakclient")
                     archiveMapperNode.appendNode("artifactId", "archive-mapper")
-                    archiveMapperNode.appendNode("version", "1.0-SNAPSHOT")
+                    archiveMapperNode.appendNode("version", "1.1-SNAPSHOT")
                 }
 
                 licenses {
