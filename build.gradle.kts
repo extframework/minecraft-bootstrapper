@@ -6,10 +6,6 @@ plugins {
     id("org.jetbrains.dokka") version "1.6.0"
 }
 
-yakclient {
-
-}
-
 group = "net.yakclient.components"
 
 dependencies {
