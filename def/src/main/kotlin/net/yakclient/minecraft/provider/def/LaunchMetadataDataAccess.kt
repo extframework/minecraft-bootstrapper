@@ -7,22 +7,23 @@ import net.yakclient.boot.store.DataAccess
 import net.yakclient.common.util.make
 import java.nio.file.Path
 import net.yakclient.common.util.resolve
+import net.yakclient.launchermeta.handler.LaunchMetadata
 import java.nio.file.Files
 
-public class MCManifestDataAccess(
+public class LaunchMetadataDataAccess(
     private val path: Path
-) : DataAccess<String, ClientManifest> {
+) : DataAccess<String, LaunchMetadata> {
     private val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
 
-    override fun read(key: String): ClientManifest? {
+    override fun read(key: String): LaunchMetadata? {
         val path = path resolve key resolve "$key-manifest.json"
 
         if (!Files.exists(path)) return null
 
-        return mapper.readValue<ClientManifest>(path.toFile())
+        return mapper.readValue<LaunchMetadata>(path.toFile())
     }
 
-    override fun write(key: String, value: ClientManifest) {
+    override fun write(key: String, value: LaunchMetadata) {
         val path = path resolve key resolve "$key-manifest.json"
 
         if (!Files.exists(path)) path.make()

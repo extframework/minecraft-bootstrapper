@@ -19,6 +19,7 @@ import net.yakclient.common.util.copyTo
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
 import net.yakclient.common.util.resource.SafeResource
+import net.yakclient.launchermeta.handler.*
 import net.yakclient.minecraft.bootstrapper.MinecraftReference
 import java.io.File
 import java.net.HttpURLConnection
@@ -26,20 +27,16 @@ import java.net.URL
 import java.nio.file.Path
 import kotlin.io.path.inputStream
 
-private infix fun SafeResource.copyToBlocking(to: Path): Path = runBlocking { this@copyToBlocking copyTo to }
-
-private const val LAUNCHER_META = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
-
 public data class DefaultMinecraftReference(
     override val version: String,
     override val archive: ArchiveReference,
     val dependencies: List<ArchiveReference>,
-    val manifest: ClientManifest, override val mappings: ArchiveMapping,
+    val manifest: LaunchMetadata, override val mappings: ArchiveMapping,
 ) : MinecraftReference
 
 internal fun loadMinecraft(
     reference: DefaultMinecraftReference,
-): Pair<ArchiveHandle, ClientManifest> {
+): Pair<ArchiveHandle, LaunchMetadata> {
     val (_, mcReference, minecraftDependencies, manifest) = reference
 
     val mcLoader = IntegratedLoader(
@@ -64,88 +61,25 @@ internal fun loadMinecraft(
 internal fun loadMinecraftRef(
     mcVersion: String,
     path: Path,
-    store: DataStore<String, ClientManifest>,
+    store: DataStore<String, LaunchMetadata>,
 ): DefaultMinecraftReference {
-    // Convert an operating system name to its type
-    fun String.osNameToType(): OsType? = when (this) {
-        "linux" -> OsType.UNIX
-        "windows" -> OsType.WINDOWS
-        "osx" -> OsType.OS_X
-        else -> null
-    }
-
     val versionPath = path resolve mcVersion
     val minecraftPath = versionPath resolve "minecraft-${mcVersion}.jar"
     val mappingsPath = versionPath resolve "minecraft-mappings-${mcVersion}.txt"
+//
+    val metadata = store[mcVersion] ?: run {
+        val manifest = loadVersionManifest().find(mcVersion)
+            ?: throw IllegalStateException("Failed to find minecraft version: '$mcVersion'. Looked in: 'https://launchermeta.mojang.com/mc/game/version_manifest_v2.json'.")
+        val metadata = parseMetadata(manifest.metadata())
 
-    // Get manifest or download manifest
-    val manifest = store[mcVersion] ?: run {
-        val url = URL(LAUNCHER_META)
-        val conn = url.openConnection() as HttpURLConnection
-        if (conn.responseCode != 200) throw IllegalStateException("Failed to load launcher metadata for minecraft! Was trying to load minecraft version: '$mcVersion' but it was not already cached.")
+        store.put(mcVersion, metadata)
 
-        data class LauncherManifestVersion(
-            val id: String,
-            val url: String,
-            val sha1: String,
-        )
-
-        data class LauncherManifest(
-            val versions: List<LauncherManifestVersion>,
-        )
-
-
-        val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-
-        val launcherManifest = mapper.readValue<LauncherManifest>(conn.inputStream)
-
-        val version = launcherManifest.versions.find { it.id == mcVersion }
-            ?: throw IllegalStateException("Failed to find minecraft version: '$mcVersion'. Looked in: '$LAUNCHER_META'.")
-
-        val manifest = mapper.readValue<ClientManifest>(URL(version.url).openStream())
-
-        // Download minecraft jar
-        if (minecraftPath.make()) {
-            val client = (manifest.downloads[ManifestDownloadType.CLIENT]
-                ?: throw IllegalStateException("Invalid client.json manifest. Must have a client download available!"))
-
-            client.toResource().copyToBlocking(minecraftPath)
-        }
-
-        // Download mappings
-        if (mappingsPath.make()) {
-            val mappings = (manifest.downloads[ManifestDownloadType.CLIENT_MAPPINGS]
-                ?: throw IllegalStateException("Invalid client.json manifest. Must have a client mappings download available!"))
-            mappings.toResource().copyToBlocking(mappingsPath)
-        }
-
-        // Download manifest
-        store.put(mcVersion, manifest)
-
-        manifest
+        metadata
     }
-
 
     val libPath = versionPath resolve "lib"
 
-    // Load libraries, from manifest
-    val libraries: List<ClientLibrary> = manifest.libraries.filter { lib ->
-        val allTypes = setOf(
-            OsType.OS_X, OsType.WINDOWS, OsType.UNIX
-        )
-
-        val allowableOperatingSystems = if (lib.rules.isEmpty()) allTypes.toMutableSet()
-        else lib.rules.filter { it.action == LibraryRuleAction.ALLOW }.flatMapTo(HashSet()) {
-            it.osName?.osNameToType()?.let(::listOf) ?: allTypes
-        }
-
-        lib.rules.filter { it.action == LibraryRuleAction.DISALLOW }.forEach {
-            it.osName?.osNameToType()?.let(allowableOperatingSystems::remove)
-        }
-
-        allowableOperatingSystems.contains(OsType.type)
-    }
+    val libraries = DefaultMetadataProcessor().deriveDependencies(OsType.type, metadata)
 
     // Loads minecraft dependencies
     val minecraftDependencies = libraries
@@ -168,7 +102,7 @@ internal fun loadMinecraftRef(
         mcVersion,
         mcReference,
         minecraftDependencies,
-        manifest,
+        metadata,
         ProGuardMappingParser.parse(mappingsPath.inputStream())
     )
 }

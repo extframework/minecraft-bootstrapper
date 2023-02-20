@@ -18,7 +18,7 @@ public data class MixinMetadata<T: MixinInjection.InjectionData>(
 )
 
 public class MinecraftHandler<T : MinecraftReference>(
-    version: String,
+    public val version: String,
     cache: Path,
     public val provider: MinecraftProvider<T>,
     private val args: Array<String>

@@ -10,6 +10,7 @@ repositories {
 
 dependencies {
     implementation("io.arrow-kt:arrow-core:1.1.2")
+    implementation("net.yakclient:launchermeta-handler:1.0-SNAPSHOT")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")

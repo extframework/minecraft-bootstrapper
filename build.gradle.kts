@@ -4,6 +4,11 @@ plugins {
     id("signing")
     id("maven-publish")
     id("org.jetbrains.dokka") version "1.6.0"
+    id("net.yakclient") version "1.0"
+
+}
+
+yakclient {
 
 }
 

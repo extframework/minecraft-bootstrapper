@@ -58,8 +58,6 @@ public class MinecraftBootstrapper : SoftwareComponent {
         }
     }
 
-
-
     override fun onEnable(context: ComponentContext) {
         logger.log(Level.INFO, "Minecraft Bootstrapper is enabling.")
 
