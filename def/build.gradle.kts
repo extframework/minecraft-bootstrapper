@@ -1,5 +1,6 @@
-plugins {
-}
+import groovy.namespace.QName
+import groovy.util.Node
+import groovy.util.NodeList
 
 group = "net.yakclient.minecraft"
 version = "1.0-SNAPSHOT"
@@ -9,7 +10,6 @@ repositories {
 }
 
 dependencies {
-    implementation("io.arrow-kt:arrow-core:1.1.2")
     implementation("net.yakclient:launchermeta-handler:1.0-SNAPSHOT")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
@@ -36,7 +36,6 @@ dependencies {
     implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
         isChanging = true
     }
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 }
 
 
@@ -53,11 +52,12 @@ task<Jar>("javadocJar") {
 publishing {
     publications {
         create<MavenPublication>("def-maven") {
+            from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
-            artifact(tasks["jar"])
 
             artifactId = "minecraft-provider-def"
+
 
             pom {
                 name.set("Minecraft Bootstrapper default")
@@ -79,12 +79,31 @@ publishing {
                     yakclientRepositoryNode.appendNode("id", "yakclient")
                     yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
 
-                    val dependenciesNode = asNode().appendNode("dependencies")
+                    val toKeep = setOf(
+                        "launchermeta-handler",
+                        "jackson-dataformat-xml",
+                        "jackson-module-kotlin",
+                        "archives",
+                        "archive-mapper",
+                        "common-util",
+                    )
 
-                    val archiveMapperNode = dependenciesNode.appendNode("dependency")
-                    archiveMapperNode.appendNode("groupId", "net.yakclient")
-                    archiveMapperNode.appendNode("artifactId", "archive-mapper")
-                    archiveMapperNode.appendNode("version", "1.1-SNAPSHOT")
+                    val nodeList = asNode()["dependencies"] as NodeList
+                    (nodeList.getAt("dependency"))
+                        .map { it as Node }
+                        .forEach {
+                            (it.value() as NodeList)
+                                .map { n -> n as Node }
+                                .filter { n ->
+                                    ((n.name() as QName).localPart).contains("artifactId")
+                                }
+                                .forEach { n ->
+                                    if (!toKeep.contains(n.value() as String)) {
+                                        val parent = n.parent()
+                                        println(parent.parent().remove(parent))
+                                    }
+                                }
+                        }
                 }
 
                 licenses {

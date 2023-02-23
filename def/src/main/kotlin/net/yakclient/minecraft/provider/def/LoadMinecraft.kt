@@ -1,11 +1,6 @@
 package net.yakclient.minecraft.provider.def
 
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
-import kotlinx.coroutines.runBlocking
 import net.yakclient.archive.mapper.ArchiveMapping
 import net.yakclient.archive.mapper.parsers.ProGuardMappingParser
 import net.yakclient.archives.ArchiveHandle
@@ -15,15 +10,11 @@ import net.yakclient.boot.loader.ArchiveSourceProvider
 import net.yakclient.boot.loader.DelegatingSourceProvider
 import net.yakclient.boot.loader.IntegratedLoader
 import net.yakclient.boot.store.DataStore
-import net.yakclient.common.util.copyTo
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
-import net.yakclient.common.util.resource.SafeResource
 import net.yakclient.launchermeta.handler.*
 import net.yakclient.minecraft.bootstrapper.MinecraftReference
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.file.Path
 import kotlin.io.path.inputStream
 

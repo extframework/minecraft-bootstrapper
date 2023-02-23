@@ -1,3 +1,5 @@
+import org.w3c.dom.NodeList
+
 plugins {
     kotlin("jvm") version "1.7.10"
     id("org.javamodularity.moduleplugin") version "1.8.12"
@@ -53,7 +55,8 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
-            artifact("${sourceSets.main.get().resources.srcDirs.first().absoluteFile}${File.separator}component-model.json").classifier = "component-model"
+            artifact("${sourceSets.main.get().resources.srcDirs.first().absoluteFile}${File.separator}component-model.json").classifier =
+                "component-model"
 
             artifactId = "minecraft-bootstrapper"
 
@@ -64,18 +67,17 @@ publishing {
 
                 packaging = "jar"
 
-                withXml {
-                    val repositoriesNode = asNode().appendNode("repositories")
-                    val yakclientRepositoryNode = repositoriesNode.appendNode("repository")
-                    yakclientRepositoryNode.appendNode("id", "yakclient")
-                    yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
-                }
-
                 developers {
                     developer {
                         id.set("Chestly")
                         name.set("Durgan McBroom")
                     }
+                }
+                withXml {
+                    val repositoriesNode = asNode().appendNode("repositories")
+                    val yakclientRepositoryNode = repositoriesNode.appendNode("repository")
+                    yakclientRepositoryNode.appendNode("id", "yakclient")
+                    yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
                 }
 
                 licenses {
@@ -109,8 +111,10 @@ allprojects {
             name = "Durgan McBroom GitHub Packages"
             url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
             credentials {
-                username = project.findProperty("dm.gpr.user") as? String ?: throw IllegalArgumentException("Need a Github package registry username!")
-                password = project.findProperty("dm.gpr.key") as? String ?: throw IllegalArgumentException("Need a Github package registry key!")
+                username = project.findProperty("dm.gpr.user") as? String
+                    ?: throw IllegalArgumentException("Need a Github package registry username!")
+                password = project.findProperty("dm.gpr.key") as? String
+                    ?: throw IllegalArgumentException("Need a Github package registry key!")
             }
         }
         maven {
