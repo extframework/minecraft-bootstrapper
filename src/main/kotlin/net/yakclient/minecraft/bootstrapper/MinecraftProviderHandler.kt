@@ -8,7 +8,9 @@ import net.yakclient.boot.archive.JpmResolutionProvider
 import net.yakclient.boot.archive.handleOrChildren
 import net.yakclient.boot.dependency.DependencyData
 import net.yakclient.boot.dependency.DependencyGraph
+import net.yakclient.boot.loader.ArchiveClassProvider
 import net.yakclient.boot.loader.ArchiveSourceProvider
+import net.yakclient.boot.loader.DelegatingClassProvider
 import net.yakclient.boot.loader.IntegratedLoader
 import net.yakclient.boot.store.DataStore
 import net.yakclient.boot.util.toSafeResource
@@ -80,15 +82,21 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
         val resource = checkNotNull(data.archive) { "Archive cannot be null for provider version: '$version'." }
 
+        val parents =
+            children.flatMapTo(HashSet()) { it.handleOrChildren() } + JpmArchives.moduleToArchive(this::class.java.module)
         val archive = archiveProvider.resolve(
             resource,
             {
                 IntegratedLoader(
                     sp = ArchiveSourceProvider(it),
-                    parent = this::class.java.classLoader
+                    parent = this::class.java.classLoader,
+                    cp = DelegatingClassProvider(
+                        parents.map(::ArchiveClassProvider)
+                    )
                 )
             },
-            children.flatMapTo(HashSet()) { it.handleOrChildren() } + JpmArchives.moduleToArchive(this::class.java.module))
+            parents
+        )
             .fold({ throw it }, ::identity).archive
 
         val properties =

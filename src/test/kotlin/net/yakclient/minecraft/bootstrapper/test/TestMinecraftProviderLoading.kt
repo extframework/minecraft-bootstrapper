@@ -1,6 +1,7 @@
 package net.yakclient.minecraft.bootstrapper.test
 
 import com.durganmcbroom.artifact.resolver.createContext
+import com.durganmcbroom.artifact.resolver.simple.maven.HashType
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMaven
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import net.yakclient.boot.BootContext
@@ -24,7 +25,10 @@ class TestMinecraftProviderLoading {
         )
         bootContext.dependencyProviders.add(
             createMavenProvider(cacheLocation, withBootDependencies {
-                val local = SimpleMaven.createContext(SimpleMavenRepositorySettings.local())
+                val local = SimpleMaven.createContext(SimpleMavenRepositorySettings.default(
+                    "http://maven.yakclient.net/snapshots",
+                    preferredHash = HashType.SHA1
+                ))
 
                 local.it("net.yakclient:archive-mapper:1.1-SNAPSHOT")
             })

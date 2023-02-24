@@ -49,6 +49,7 @@ internal fun loadMinecraft(
     return minecraft.archive to manifest
 }
 
+
 internal fun loadMinecraftRef(
     mcVersion: String,
     path: Path,
@@ -57,7 +58,7 @@ internal fun loadMinecraftRef(
     val versionPath = path resolve mcVersion
     val minecraftPath = versionPath resolve "minecraft-${mcVersion}.jar"
     val mappingsPath = versionPath resolve "minecraft-mappings-${mcVersion}.txt"
-//
+
     val metadata = store[mcVersion] ?: run {
         val manifest = loadVersionManifest().find(mcVersion)
             ?: throw IllegalStateException("Failed to find minecraft version: '$mcVersion'. Looked in: 'https://launchermeta.mojang.com/mc/game/version_manifest_v2.json'.")
@@ -66,6 +67,19 @@ internal fun loadMinecraftRef(
         store.put(mcVersion, metadata)
 
         metadata
+    }
+
+    if (minecraftPath.make()) {
+        val clientResource = metadata.downloads[LaunchMetadataDownloadType.CLIENT]?.toResource()
+            ?: throw IllegalArgumentException("Cant find client in launch metadata?")
+        clientResource copyToBlocking minecraftPath
+    }
+
+    // Download mappings
+    if (mappingsPath.make()) {
+        val mappingsResource = metadata.downloads[LaunchMetadataDownloadType.CLIENT_MAPPINGS]?.toResource()
+            ?: throw IllegalArgumentException("Cant find client mappings in launch metadata?")
+        mappingsResource copyToBlocking mappingsPath
     }
 
     val libPath = versionPath resolve "lib"
