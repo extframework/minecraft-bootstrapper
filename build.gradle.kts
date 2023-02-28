@@ -11,7 +11,8 @@ plugins {
 group = "net.yakclient.components"
 
 dependencies {
-    implementation("net.yakclient:archives-mixin:1.0-SNAPSHOT") {
+    implementation("net.yakclient:archives:1.1-SNAPSHOT")
+    implementation("net.yakclient:archives-mixin:1.1-SNAPSHOT") {
         isChanging = true
     }
 

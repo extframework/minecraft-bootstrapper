@@ -70,7 +70,7 @@ public class MinecraftHandler<T : MinecraftReference>(
         val toWrite = mixins.map { (to, all: MutableList<MixinMetadata<*>>) ->
             all.map {(data, injection) ->
                 (injection as MixinInjection<MixinInjection.InjectionData>).apply(data)
-            }.reduce { acc: TransformerConfig, t: TransformerConfig.MutableTransformerConfiguration ->
+            }.reduce { acc: TransformerConfig, t: TransformerConfig.Mutable ->
                 acc + t
             } to to
         }
