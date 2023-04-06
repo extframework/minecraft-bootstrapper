@@ -98,7 +98,7 @@ public class MinecraftBootstrapper : SoftwareComponent {
                 jarPath
             },
             CachingDataStore(MavenDataAccess(cachePath)),
-            context.bootContext.dependencyProviders["simple-maven"]?.graph  as DependencyGraph<SimpleMavenArtifactRequest, *, RepositorySettings>,
+            context.bootContext.dependencyProviders["simple-maven"]?.graph as DependencyGraph<SimpleMavenArtifactRequest, *, RepositorySettings>,
         ) {
             SimpleMavenArtifactRequest(
                 versionMappings[it] ?: run {

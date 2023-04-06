@@ -6,7 +6,7 @@
   "dependencies": [
     {
       "request": {
-        "descriptor": "net.yakclient:archives-mixin:1.0-SNAPSHOT"
+        "descriptor": "net.yakclient:archives-mixin:1.1-SNAPSHOT"
       },
       "repository": {
         "type": "simple-maven",

@@ -3,8 +3,9 @@ package net.yakclient.minecraft.bootstrapper
 import arrow.core.Either
 import arrow.core.identity
 import com.durganmcbroom.artifact.resolver.*
-import net.yakclient.archives.JpmArchives
-import net.yakclient.boot.archive.JpmResolutionProvider
+import net.yakclient.archives.*
+import net.yakclient.archives.jpm.JpmResolutionResult
+import net.yakclient.boot.archive.BasicArchiveResolutionProvider
 import net.yakclient.boot.archive.handleOrChildren
 import net.yakclient.boot.dependency.DependencyData
 import net.yakclient.boot.dependency.DependencyGraph
@@ -28,8 +29,10 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
     private val dependencyGraph: DependencyGraph<T, *, R>,
     private val requestBuilder: (version: String) -> T,
 ) {
-    private val archiveProvider = JpmResolutionProvider
-
+    private val archiveProvider = BasicArchiveResolutionProvider(
+        Archives.Finders.JPM_FINDER as ArchiveFinder<ArchiveReference>,
+        Archives.Resolvers.JPM_RESOLVER
+    )
 
     public fun get(version: String, settings: R): MinecraftProvider<*> {
         val req: T = requestBuilder(version)
