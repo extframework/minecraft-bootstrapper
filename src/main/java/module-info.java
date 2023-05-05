@@ -1,6 +1,5 @@
 module yakclient.minecraft.bootstrapper {
     requires kotlin.stdlib;
-    requires yakclient.boot;
     requires yakclient.archives;
     requires kotlinx.cli.jvm;
     requires durganmcbroom.artifact.resolver.simple.maven;

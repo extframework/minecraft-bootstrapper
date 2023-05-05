@@ -4,7 +4,7 @@ import arrow.core.Either
 import arrow.core.identity
 import com.durganmcbroom.artifact.resolver.*
 import net.yakclient.archives.*
-import net.yakclient.archives.jpm.JpmResolutionResult
+import net.yakclient.archives.zip.classLoaderToArchive
 import net.yakclient.boot.archive.BasicArchiveResolutionProvider
 import net.yakclient.boot.archive.handleOrChildren
 import net.yakclient.boot.dependency.DependencyData
@@ -30,8 +30,8 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
     private val requestBuilder: (version: String) -> T,
 ) {
     private val archiveProvider = BasicArchiveResolutionProvider(
-        Archives.Finders.JPM_FINDER as ArchiveFinder<ArchiveReference>,
-        Archives.Resolvers.JPM_RESOLVER
+        Archives.Finders.ZIP_FINDER as ArchiveFinder<ArchiveReference>,
+        Archives.Resolvers.ZIP_RESOLVER
     )
 
     public fun get(version: String, settings: R): MinecraftProvider<*> {
@@ -86,7 +86,7 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
         val resource = checkNotNull(data.archive) { "Archive cannot be null for provider version: '$version'." }
 
         val parents =
-            children.flatMapTo(HashSet()) { it.handleOrChildren() } + JpmArchives.moduleToArchive(this::class.java.module)
+            children.flatMapTo(HashSet()) { it.handleOrChildren() } + classLoaderToArchive(this::class.java.classLoader)
         val archive = archiveProvider.resolve(
             resource,
             {
