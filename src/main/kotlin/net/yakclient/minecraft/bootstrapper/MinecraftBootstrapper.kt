@@ -2,6 +2,7 @@ package net.yakclient.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.RepositorySettings
 import com.durganmcbroom.artifact.resolver.simple.maven.HashType
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMaven
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -98,7 +99,7 @@ public class MinecraftBootstrapper : SoftwareComponent {
                 jarPath
             },
             CachingDataStore(MavenDataAccess(cachePath)),
-            context.bootContext.dependencyProviders["simple-maven"]?.graph as DependencyGraph<SimpleMavenArtifactRequest, *, RepositorySettings>,
+            context.boot.dependencyProviders["simple-maven"]?.graph as DependencyGraph<SimpleMavenArtifactRequest, *, SimpleMavenRepositorySettings>,
         ) {
             SimpleMavenArtifactRequest(
                 versionMappings[it] ?: run {

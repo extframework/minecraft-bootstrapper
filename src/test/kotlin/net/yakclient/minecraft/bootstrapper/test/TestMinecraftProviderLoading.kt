@@ -1,14 +1,7 @@
 package net.yakclient.minecraft.bootstrapper.test
 
-import com.durganmcbroom.artifact.resolver.createContext
-import com.durganmcbroom.artifact.resolver.simple.maven.HashType
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMaven
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
-import net.yakclient.boot.BootContext
+import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.ComponentContext
-import net.yakclient.boot.createMavenProvider
-import net.yakclient.boot.dependency.DependencyProviders
-import net.yakclient.boot.withBootDependencies
 import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapper
 import java.io.File
 import kotlin.test.Test
@@ -20,19 +13,7 @@ class TestMinecraftProviderLoading {
 
         val bootstrapper = MinecraftBootstrapper()
 
-        val bootContext = BootContext(
-            DependencyProviders()
-        )
-        bootContext.dependencyProviders.add(
-            createMavenProvider(cacheLocation, withBootDependencies {
-                val local = SimpleMaven.createContext(SimpleMavenRepositorySettings.default(
-                    "http://maven.yakclient.net/snapshots",
-                    preferredHash = HashType.SHA1
-                ))
-
-                local.it("net.yakclient:archive-mapper:1.1-SNAPSHOT")
-            })
-        )
+        val boot = BootInstance.new(cacheLocation)
 
         bootstrapper.onEnable(
             ComponentContext(
@@ -41,10 +22,10 @@ class TestMinecraftProviderLoading {
                     "repository" to "/Users/durgan/.m2/repository",
                     "repositoryType" to "LOCAL",
                     "cache" to cacheLocation,
-                    "providerVersionMappings" to "file:///Users/durgan/IdeaProjects/durganmcbroom/minecraft-bootstrapper/cache/version-mappings.json",
+                    "providerVersionMappings" to "http://maven.yakclient.net/public/mc-version-mappings.json",
                     "mcArgs" to "--version;1.19.2;--accessToken;"
                 ),
-                bootContext
+                boot
             ),
         )
 
