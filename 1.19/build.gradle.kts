@@ -3,19 +3,29 @@ plugins {
 
 group = "net.yakclient.minecraft"
 version = "1.0-SNAPSHOT"
-
 repositories {
     mavenCentral()
+    maven {
+        name = "Durgan McBroom GitHub Packages"
+        url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
+        credentials {
+            username = project.findProperty("dm.gpr.user") as? String ?: throw IllegalArgumentException("Need a Github package registry username!")
+            password = project.findProperty("dm.gpr.key") as? String ?: throw IllegalArgumentException("Need a Github package registry key!")
+        }
+    }
+    maven {
+        isAllowInsecureProtocol = true
+        url = uri("http://maven.yakclient.net/snapshots")
+    }
 }
-
 dependencies {
     implementation("io.arrow-kt:arrow-core:1.1.2")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
-    implementation("net.yakclient:archives:1.0-SNAPSHOT")
+    implementation("net.yakclient:archives:1.1-SNAPSHOT")
     implementation(project(":"))
-    implementation("net.yakclient:archive-mapper:1.0-SNAPSHOT") {
+    implementation("net.yakclient:archive-mapper:1.1-SNAPSHOT") {
         isChanging = true
     }
     implementation("net.yakclient:boot:1.0-SNAPSHOT") {

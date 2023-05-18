@@ -119,7 +119,6 @@ allprojects {
 
     repositories {
         mavenCentral()
-        mavenLocal()
         maven {
             name = "Durgan McBroom GitHub Packages"
             url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
@@ -139,7 +138,7 @@ allprojects {
             if (!project.hasProperty("maven-user") || !project.hasProperty("maven-pass")) return@repositories
 
             maven {
-                val repo = if (project.findProperty("isSnapshot") == "true") "snapshots" else "releases"
+                val repo = if ((version as String).contains("-SNAPSHOT")) "snapshots" else "releases"
 
                 isAllowInsecureProtocol = true
 
