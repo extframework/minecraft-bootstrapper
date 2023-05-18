@@ -3,15 +3,18 @@ package net.yakclient.minecraft.bootstrapper
 import arrow.core.Either
 import arrow.core.identity
 import com.durganmcbroom.artifact.resolver.*
-import net.yakclient.archives.JpmArchives
-import net.yakclient.boot.archive.JpmResolutionProvider
+import net.yakclient.archives.*
+import net.yakclient.archives.zip.classLoaderToArchive
+import net.yakclient.boot.archive.BasicArchiveResolutionProvider
+import net.yakclient.boot.archive.handleOrChildren
 import net.yakclient.boot.dependency.DependencyData
 import net.yakclient.boot.dependency.DependencyGraph
-import net.yakclient.boot.dependency.handleOrChildren
+import net.yakclient.boot.loader.ArchiveClassProvider
 import net.yakclient.boot.loader.ArchiveSourceProvider
+import net.yakclient.boot.loader.DelegatingClassProvider
 import net.yakclient.boot.loader.IntegratedLoader
 import net.yakclient.boot.store.DataStore
-import net.yakclient.boot.toSafeResource
+import net.yakclient.boot.util.toSafeResource
 import net.yakclient.common.util.resource.SafeResource
 import java.nio.file.Path
 import java.util.*
@@ -26,10 +29,12 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
     private val dependencyGraph: DependencyGraph<T, *, R>,
     private val requestBuilder: (version: String) -> T,
 ) {
-    private val archiveProvider = JpmResolutionProvider
+    private val archiveProvider = BasicArchiveResolutionProvider(
+        Archives.Finders.ZIP_FINDER as ArchiveFinder<ArchiveReference>,
+        Archives.Resolvers.ZIP_RESOLVER
+    )
 
-
-    public fun get(version: String, settings: R): MinecraftProvider {
+    public fun get(version: String, settings: R): MinecraftProvider<*> {
         val req: T = requestBuilder(version)
 
         val data = store[req] ?: run {
@@ -46,13 +51,16 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
             ref.children.forEach {
                 for (s in it.candidates) {
-                    val candidateSettings = (repository.stubResolver.repositoryResolver as RepositoryStubResolver<RepositoryStub, R>).resolve(s).orNull() ?: continue
+                    val candidateSettings =
+                        (repository.stubResolver.repositoryResolver as RepositoryStubResolver<RepositoryStub, R>).resolve(
+                            s
+                        ).orNull() ?: continue
 
-                    if (dependencyGraph.loaderOf(candidateSettings).load(it.request as T).isRight()) break
+                    if (dependencyGraph.cacherOf(candidateSettings).cache(it.request as T).isRight()) break
                 }
             }
 
-            val jarPath =  archiveWriter(
+            val jarPath = archiveWriter(
                 req,
                 checkNotNull(ref.metadata.resource) { "Archive cannot be null for provider version: '$version'." }.toSafeResource()
             )
@@ -77,12 +85,21 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
         val resource = checkNotNull(data.archive) { "Archive cannot be null for provider version: '$version'." }
 
-        val archive = archiveProvider.resolve(resource, {
-            IntegratedLoader(
-                sp = ArchiveSourceProvider(it),
-                parent = this::class.java.classLoader
-            )
-        }, children.flatMapTo(HashSet()) { it.handleOrChildren() } + JpmArchives.moduleToArchive(this::class.java.module))
+        val parents =
+            children.flatMapTo(HashSet()) { it.handleOrChildren() } + classLoaderToArchive(this::class.java.classLoader)
+        val archive = archiveProvider.resolve(
+            resource,
+            {
+                IntegratedLoader(
+                    sp = ArchiveSourceProvider(it),
+                    parent = this::class.java.classLoader,
+                    cp = DelegatingClassProvider(
+                        parents.map(::ArchiveClassProvider)
+                    )
+                )
+            },
+            parents
+        )
             .fold({ throw it }, ::identity).archive
 
         val properties =
@@ -95,7 +112,7 @@ public class MinecraftProviderHandler<T : ArtifactRequest<*>, R : RepositorySett
 
         val clazz = archive.classloader.loadClass(providerClassName)
 
-        return clazz.getConstructor().newInstance() as? MinecraftProvider
+        return clazz.getConstructor().newInstance() as? MinecraftProvider<*>
             ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
     }
 }

@@ -1,7 +1,0 @@
-{
-  "name": "Minecraft",
-  "appClassName": "net.yakclient.minecraft.bootstrapper.MinecraftBootstrapper",
-  "dependencies": [
-
-  ]
-}

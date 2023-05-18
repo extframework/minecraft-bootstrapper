@@ -1,37 +1,20 @@
+import org.w3c.dom.NodeList
+
 plugins {
     kotlin("jvm") version "1.7.10"
     id("org.javamodularity.moduleplugin") version "1.8.12"
     id("signing")
     id("maven-publish")
     id("org.jetbrains.dokka") version "1.6.0"
-
 }
 
-group = "net.yakclient.minecraft"
-version = "1.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-    maven {
-        isAllowInsecureProtocol = true
-        url = uri("http://repo.yakclient.net/snapshots")
-    }
-    maven {
-        name = "Durgan McBroom GitHub Packages"
-        url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
-        credentials {
-            username = project.findProperty("dm.gpr.user") as? String
-                ?: throw IllegalArgumentException("Need a Github package registry username!")
-            password = project.findProperty("dm.gpr.key") as? String
-                ?: throw IllegalArgumentException("Need a Github package registry key!")
-        }
-    }
-}
-
-
+group = "net.yakclient.components"
 
 dependencies {
-    implementation("net.yakclient:common-util:1.0-SNAPSHOT")
+    implementation("net.yakclient:archives:1.1-SNAPSHOT")
+    implementation("net.yakclient:archives-mixin:1.1-SNAPSHOT") {
+        isChanging = true
+    }
 
     implementation("io.arrow-kt:arrow-core:1.1.2")
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
@@ -49,6 +32,12 @@ dependencies {
     implementation("com.durganmcbroom:artifact-resolver-simple-maven:1.0-SNAPSHOT") {
         isChanging = true
     }
+    implementation("net.bytebuddy:byte-buddy-agent:1.12.18")
+    implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
+        isChanging = true
+    }
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
+    implementation("net.yakclient:archive-mapper:1.1-SNAPSHOT")
 }
 
 task<Jar>("sourcesJar") {
@@ -67,6 +56,8 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
+            artifact("${sourceSets.main.get().resources.srcDirs.first().absoluteFile}${File.separator}component-model.json").classifier =
+                "component-model"
 
             artifactId = "minecraft-bootstrapper"
 
@@ -77,18 +68,17 @@ publishing {
 
                 packaging = "jar"
 
-                withXml {
-                    val repositoriesNode = asNode().appendNode("repositories")
-                    val yakclientRepositoryNode = repositoriesNode.appendNode("repository")
-                    yakclientRepositoryNode.appendNode("id", "yakclient")
-                    yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
-                }
-
                 developers {
                     developer {
                         id.set("Chestly")
                         name.set("Durgan McBroom")
                     }
+                }
+                withXml {
+                    val repositoriesNode = asNode().appendNode("repositories")
+                    val yakclientRepositoryNode = repositoriesNode.appendNode("repository")
+                    yakclientRepositoryNode.appendNode("id", "yakclient")
+                    yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
                 }
 
                 licenses {
@@ -114,7 +104,6 @@ allprojects {
     apply(plugin = "org.jetbrains.dokka")
     apply(plugin = "org.javamodularity.moduleplugin")
 
-    group = "net.yakclient"
     version = "1.0-SNAPSHOT"
 
     repositories {
@@ -123,8 +112,10 @@ allprojects {
             name = "Durgan McBroom GitHub Packages"
             url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
             credentials {
-                username = project.findProperty("dm.gpr.user") as? String ?: throw IllegalArgumentException("Need a Github package registry username!")
-                password = project.findProperty("dm.gpr.key") as? String ?: throw IllegalArgumentException("Need a Github package registry key!")
+                username = project.findProperty("dm.gpr.user") as? String
+                    ?: throw IllegalArgumentException("Need a Github package registry username!")
+                password = project.findProperty("dm.gpr.key") as? String
+                    ?: throw IllegalArgumentException("Need a Github package registry key!")
             }
         }
         maven {
@@ -135,10 +126,9 @@ allprojects {
 
     publishing {
         repositories {
-            if (!project.hasProperty("maven-user") || !project.hasProperty("maven-pass")) return@repositories
-
-            maven {
-                val repo = if ((version as String).contains("-SNAPSHOT")) "snapshots" else "releases"
+            if (project.hasProperty("maven-user") && project.hasProperty("maven-secret")) maven {
+                logger.quiet("Maven user and password found.")
+                val repo = if ((version as String).endsWith("-SNAPSHOT")) "snapshots" else "releases"
 
                 isAllowInsecureProtocol = true
 
@@ -146,12 +136,12 @@ allprojects {
 
                 credentials {
                     username = project.findProperty("maven-user") as String
-                    password = project.findProperty("maven-pass") as String
+                    password = project.findProperty("maven-secret") as String
                 }
                 authentication {
                     create<BasicAuthentication>("basic")
                 }
-            }
+            } else logger.quiet("Maven user and password not found.")
         }
     }
 
