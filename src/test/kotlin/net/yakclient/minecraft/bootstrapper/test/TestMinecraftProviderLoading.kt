@@ -1,5 +1,6 @@
 package net.yakclient.minecraft.bootstrapper.test
 
+import com.durganmcbroom.artifact.resolver.simple.maven.layout.mavenLocal
 import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.ComponentContext
 import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapper
@@ -19,7 +20,7 @@ class TestMinecraftProviderLoading {
             ComponentContext(
                 mapOf(
                     "version" to "1.19.2",
-                    "repository" to "/Users/durgan/.m2/repository",
+                    "repository" to mavenLocal,
                     "repositoryType" to "LOCAL",
                     "cache" to cacheLocation,
                     "providerVersionMappings" to "http://maven.yakclient.net/public/mc-version-mappings.json",

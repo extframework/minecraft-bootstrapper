@@ -2,8 +2,6 @@ import org.w3c.dom.NodeList
 
 plugins {
     kotlin("jvm") version "1.7.10"
-    id("org.javamodularity.moduleplugin") version "1.8.12"
-    id("signing")
     id("maven-publish")
     id("org.jetbrains.dokka") version "1.6.0"
 }
@@ -102,7 +100,6 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "maven-publish")
     apply(plugin = "org.jetbrains.dokka")
-    apply(plugin = "org.javamodularity.moduleplugin")
 
     version = "1.0-SNAPSHOT"
 
