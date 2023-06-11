@@ -132,6 +132,7 @@ allprojects {
                 isAllowInsecureProtocol = true
 
                 url = uri("http://maven.yakclient.net/$repo")
+                logger.info("Publishing to repository: '$url'")
 
                 credentials {
                     username = project.findProperty("maven-user") as String
