@@ -25,5 +25,9 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
         override fun start(args: Array<String>) {
             archive.classloader.loadClass(manifest.mainClass).getMethod("main", Array<String>::class.java).invoke(null, args)
         }
+
+        override fun shutdown() {
+            TODO()
+        }
     }
 }

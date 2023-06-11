@@ -1,7 +1,7 @@
 {
   "name": "minecraft-bootstrapper",
   "packaging": "jar",
-  "entrypoint": "net.yakclient.minecraft.bootstrapper.MinecraftBootstrapper",
+  "entrypoint": "net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperFactory",
   "children": [  ],
   "dependencies": [
     {

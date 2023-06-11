@@ -36,6 +36,7 @@ dependencies {
     }
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
     implementation("net.yakclient:archive-mapper:1.1-SNAPSHOT")
+    testImplementation("net.yakclient:boot-test:1.0-SNAPSHOT")
 }
 
 task<Jar>("sourcesJar") {
@@ -104,6 +105,7 @@ allprojects {
     version = "1.0-SNAPSHOT"
 
     repositories {
+        mavenLocal()
         mavenCentral()
         maven {
             name = "Durgan McBroom GitHub Packages"

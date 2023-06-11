@@ -47,6 +47,12 @@ public class MinecraftHandler<T : MinecraftReference>(
         handle.start(args)
     }
 
+    internal fun shutdownMinecraft() {
+        check(hasStarted) {"Minecraft is not running!"}
+
+        handle.shutdown()
+    }
+
     public fun registerMixin(to: String, metadata: MixinMetadata<*>) {
         check(
             minecraftReference.archive.reader.contains(
