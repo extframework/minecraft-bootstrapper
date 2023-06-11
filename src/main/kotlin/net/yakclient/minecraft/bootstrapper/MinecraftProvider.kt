@@ -1,6 +1,5 @@
 package net.yakclient.minecraft.bootstrapper
 
-import net.yakclient.archives.ArchiveHandle
 import java.nio.file.Path
 
 public interface MinecraftProvider<T: MinecraftReference> {

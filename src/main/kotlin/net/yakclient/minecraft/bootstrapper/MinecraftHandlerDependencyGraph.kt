@@ -1,8 +1,6 @@
 package net.yakclient.minecraft.bootstrapper
 
 import arrow.core.Either
-import arrow.core.identity
-import arrow.core.orNull
 import arrow.core.right
 import com.durganmcbroom.artifact.resolver.*
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
@@ -13,20 +11,16 @@ import net.yakclient.archives.zip.ZipResolutionResult
 import net.yakclient.archives.zip.classLoaderToArchive
 import net.yakclient.boot.archive.ArchiveLoadException
 import net.yakclient.boot.archive.ArchiveResolutionProvider
-import net.yakclient.boot.archive.BasicArchiveResolutionProvider
-import net.yakclient.boot.archive.handleOrChildren
-import net.yakclient.boot.dependency.DependencyData
-import net.yakclient.boot.dependency.DependencyGraph
 import net.yakclient.boot.loader.ArchiveClassProvider
 import net.yakclient.boot.loader.ArchiveSourceProvider
 import net.yakclient.boot.loader.DelegatingClassProvider
 import net.yakclient.boot.loader.IntegratedLoader
 import net.yakclient.boot.maven.MavenDataAccess
 import net.yakclient.boot.maven.MavenDependencyGraph
+import net.yakclient.boot.security.PrivilegeAccess
+import net.yakclient.boot.security.PrivilegeManager
+import net.yakclient.boot.security.SecureSourceDefiner
 import net.yakclient.boot.store.CachingDataStore
-import net.yakclient.boot.store.DataStore
-import net.yakclient.boot.util.toSafeResource
-import net.yakclient.common.util.resource.SafeResource
 import java.nio.file.Path
 import java.util.*
 
@@ -37,29 +31,34 @@ private const val MINECRAFT_PROVIDER_CN = "provider-name"
 
 public class MinecraftHandlerDependencyGraph(
         path: Path,
-        private val repository: SimpleMavenRepositorySettings
-): MavenDependencyGraph(
+        private val repository: SimpleMavenRepositorySettings,
+        privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
+
+        ): MavenDependencyGraph(
         path,
         CachingDataStore(MavenDataAccess(path)),
         object : ArchiveResolutionProvider<ZipResolutionResult> {
             override fun resolve(resource: Path, classLoader: ClassLoaderProvider<ArchiveReference>, parents: Set<ArchiveHandle>): Either<ArchiveLoadException, ZipResolutionResult> {
                 val ref = Archives.Finders.ZIP_FINDER.find(resource)
-                val cl = classLoader(ref)
+                val cl = IntegratedLoader(
+                        DelegatingClassProvider(parents.map(::ArchiveClassProvider)),
+                        ArchiveSourceProvider(ref),
+                        SecureSourceDefiner(privilegeManager),
+                        this::class.java.classLoader
+                )
 
                 return Archives.resolve(
                         ref, cl, Archives.Resolvers.ZIP_RESOLVER, (parents + classLoaderToArchive(MinecraftBootstrapper::class.java.classLoader))
                 ).right()
             }
-        }
+        }, privilegeManager = privilegeManager
 ) {
-
-
     public fun load(descriptor: SimpleMavenDescriptor) : MinecraftProvider<*> {
-        val archive = get(descriptor).orNull()?.archive
+        val archive = (get(descriptor).orNull()
                 ?: run {
                     cacherOf(repository).cache(SimpleMavenArtifactRequest(descriptor, includeScopes = setOf("compile", "runtime", "import"))).tapLeft { throw it }
-                    get(descriptor).orNull()?.archive!!
-                }
+                    get(descriptor).orNull()
+                })?.archive ?: throw IllegalArgumentException("Could not cache or get minecraft provider: '${descriptor.name}'")
 
         val properties =
                 checkNotNull(archive.classloader.getResourceAsStream(PROPERTY_FILE_LOCATION)) { "Failed to find Minecraft Provider properties file in given archive." }.use {
