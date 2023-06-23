@@ -10,14 +10,27 @@ import net.yakclient.launchermeta.handler.LaunchMetadata
 import net.yakclient.minecraft.bootstrapper.MinecraftHandle
 import net.yakclient.minecraft.bootstrapper.MinecraftProvider
 import java.nio.file.Path
+import java.security.Permission
 
 public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftReference> {
     override fun getReference(version: String, cachePath: Path): DefaultMinecraftReference {
         return loadMinecraftRef(version, cachePath, DelegatingDataStore(LaunchMetadataDataAccess(cachePath)))
     }
 
+    private class ExitTrappedException : SecurityException()
+
     override fun get(ref: DefaultMinecraftReference): MinecraftHandle {
         val (handle, manifest) = loadMinecraft(ref)
+
+        // https://stackoverflow.com/questions/5401281/preventing-system-exit-from-api
+        val securityManager: SecurityManager = object : SecurityManager() {
+            override fun checkPermission(permission: Permission) {
+                if ("exitVM" == permission.getName()) {
+                    throw ExitTrappedException()
+                }
+            }
+        }
+        System.setSecurityManager(securityManager)
 
         return DefaultMinecraftHandle(handle, manifest, ref.mappings)
     }
