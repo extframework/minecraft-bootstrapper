@@ -43,14 +43,14 @@ public class MinecraftHandler<T : MinecraftReference>(
 
     public fun startMinecraft() {
         check(!hasStarted) { "Minecraft has already started" }
-
+        hasStarted = true
         handle.start(args)
     }
 
     internal fun shutdownMinecraft() {
         check(hasStarted) {"Minecraft is not running!"}
-
         handle.shutdown()
+        hasStarted = false
     }
 
     public fun registerMixin(to: String, metadata: MixinMetadata<*>) {

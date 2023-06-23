@@ -28,6 +28,13 @@ class TestMinecraftProviderLoading {
                 )))
         instance.start()
         instance.minecraftHandler.loadMinecraft()
+        Thread {
+            println("Stopping in 5")
+            Thread.sleep(5000)
+
+            instance.minecraftHandler.shutdownMinecraft()
+
+        }.start()
         instance.minecraftHandler.startMinecraft()
     }
 }
