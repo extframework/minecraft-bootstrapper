@@ -16,7 +16,7 @@ import kotlin.test.Test
 class TestMinecraftProviderLoading {
     @Test
     fun `Test 1_19_2 load`() {
-        val bootInstance = testBootInstance(mapOf(), location= Files.createTempDirectory(UUID.randomUUID().toString()))
+        val bootInstance = testBootInstance(mapOf(), location = Files.createTempDirectory(UUID.randomUUID().toString()))
 
         val instance = MinecraftBootstrapperFactory(bootInstance).new(MinecraftBootstrapperConfiguration(
                 "1.19.2",
@@ -28,13 +28,8 @@ class TestMinecraftProviderLoading {
                 )))
         instance.start()
         instance.minecraftHandler.loadMinecraft()
-        Thread {
-            println("Stopping in 5")
-            Thread.sleep(5000)
 
-            instance.minecraftHandler.shutdownMinecraft()
-
-        }.start()
         instance.minecraftHandler.startMinecraft()
+        println("back here") // This should be expected to print if all goes well :)
     }
 }

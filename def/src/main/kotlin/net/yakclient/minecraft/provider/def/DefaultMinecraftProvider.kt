@@ -9,6 +9,7 @@ import net.yakclient.boot.store.DelegatingDataStore
 import net.yakclient.launchermeta.handler.LaunchMetadata
 import net.yakclient.minecraft.bootstrapper.MinecraftHandle
 import net.yakclient.minecraft.bootstrapper.MinecraftProvider
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.Path
 import java.security.Permission
 
@@ -17,20 +18,9 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
         return loadMinecraftRef(version, cachePath, DelegatingDataStore(LaunchMetadataDataAccess(cachePath)))
     }
 
-    private class ExitTrappedException : SecurityException()
 
     override fun get(ref: DefaultMinecraftReference): MinecraftHandle {
         val (handle, manifest) = loadMinecraft(ref)
-
-        // https://stackoverflow.com/questions/5401281/preventing-system-exit-from-api
-        val securityManager: SecurityManager = object : SecurityManager() {
-            override fun checkPermission(permission: Permission) {
-                if ("exitVM" == permission.getName()) {
-                    throw ExitTrappedException()
-                }
-            }
-        }
-        System.setSecurityManager(securityManager)
 
         return DefaultMinecraftHandle(handle, manifest, ref.mappings)
     }
@@ -40,12 +30,31 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
             private val manifest: LaunchMetadata,
             private val mappings: ArchiveMapping
     ) : MinecraftHandle {
+        private class ExitTrappedException : SecurityException()
+
         override fun start(args: Array<String>) {
-            archive.classloader.loadClass(manifest.mainClass).getMethod("main", Array<String>::class.java).invoke(null, args)
+            // https://stackoverflow.com/questions/5401281/preventing-system-exit-from-api
+            val securityManager: SecurityManager = object : SecurityManager() {
+                override fun checkExit(status: Int) {
+                    throw ExitTrappedException()
+                }
+
+                override fun checkPermission(perm: Permission?) {
+                    // Dont wanna check permissions
+                }
+            }
+            System.setSecurityManager(securityManager)
+
+            val out = System.out
+            try {
+                archive.classloader.loadClass(manifest.mainClass).getMethod("main", Array<String>::class.java).invoke(null, args)
+            } catch (e: Throwable) {
+                System.setOut(out)
+                if (!(e is InvocationTargetException && ExitTrappedException::class.isInstance(e.targetException))) throw e
+            }
         }
 
         override fun shutdown() {
-            // TODO different paths to the Minecraft class based on mc version
             val mapping = mappings.classes[ClassIdentifier(
                     "net/minecraft/client/Minecraft", MappingType.REAL
             )]
@@ -57,6 +66,8 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
                     { "Couldnt map method 'net.minecraft.client.Minecraft getInstance()', is this minecraft loader out of date?" }
             ).invoke(null)
             checkNotNull(minecraft) { "Couldnt get minecraft instance, has it fully started?" }
+
+
             minecraftClass.getMethod(
                     checkNotNull(mapping.methods[MethodIdentifier("stop", listOf(), MappingType.REAL)]?.fakeIdentifier?.name)
                     { "Couldnt map method 'net.minecraft.client.Minecraft stop()', is this minecraft loader out of date?" }
