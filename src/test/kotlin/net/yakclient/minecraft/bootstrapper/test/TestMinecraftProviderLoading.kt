@@ -10,26 +10,41 @@ import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperConfiguration
 import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperFactory
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import kotlin.test.Test
 
+fun main() {
+    TestMinecraftProviderLoading().loadMinecraft("1.20.1")
+}
+
 class TestMinecraftProviderLoading {
-    @Test
-    fun `Test 1_19_2 load`() {
-        val bootInstance = testBootInstance(mapOf(), location = Files.createTempDirectory(UUID.randomUUID().toString()))
+    fun loadMinecraft(version: String) {
+        val bootInstance = testBootInstance(mapOf(), location = Path.of(this::class.java.getResource("")!!.path))
+        println(bootInstance.location)
 
         val instance = MinecraftBootstrapperFactory(bootInstance).new(MinecraftBootstrapperConfiguration(
-                "1.19.2",
-                SimpleMavenRepositorySettings.local(preferredHash = HashType.SHA1),
-                "mc",
-                "http://maven.yakclient.net/public/mc-version-mappings.json",
-                listOf(
-                        "--version", "1.19.2", "--accessToken", ""
-                )))
+            version,
+            SimpleMavenRepositorySettings.local(preferredHash = HashType.SHA1),
+            "mc",
+            this::class.java.getResource("/mc-version-test-mappings.json")!!.toString(),
+            listOf(
+                "--accessToken", ""
+            )))
         instance.start()
         instance.minecraftHandler.loadMinecraft()
 
         instance.minecraftHandler.startMinecraft()
-        println("back here") // This should be expected to print if all goes well :)
+        println("back here")
+    }
+
+    @Test
+    fun `Test 1_19_2 load`() {
+        loadMinecraft("1.19.2")
+    }
+
+    @Test
+    fun `Test 1_20_1 load`() {
+        loadMinecraft("1.20.1")
     }
 }

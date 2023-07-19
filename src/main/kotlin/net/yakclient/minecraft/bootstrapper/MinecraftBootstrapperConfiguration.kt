@@ -8,5 +8,6 @@ public data class MinecraftBootstrapperConfiguration(
         val repository: SimpleMavenRepositorySettings,
         val cache: String,
         val versionMappings: String,
-        val mcArgs: List<String>
+        val mcArgs: List<String>,
+        val applyBasicArgs: Boolean = true
 ) : ComponentConfiguration

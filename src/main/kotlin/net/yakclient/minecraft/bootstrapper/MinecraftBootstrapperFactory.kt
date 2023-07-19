@@ -5,6 +5,7 @@ import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySet
 import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.ComponentFactory
 import net.yakclient.boot.component.context.ContextNodeTypes
+import net.yakclient.boot.component.context.ContextNodeTypes.Boolean
 import net.yakclient.boot.component.context.ContextNodeTypes.String
 import net.yakclient.boot.component.context.ContextNodeValue
 
@@ -28,7 +29,8 @@ public class MinecraftBootstrapperFactory(boot: BootInstance) : ComponentFactory
                 tree["cache"]?.coerceType(String).coerceNotNull { "Invalid Minecraft Bootstrapper configuration, property 'cache' is required." },
                 tree["versionMappings"]?.coerceType(String).coerceNotNull { "Invalid Minecraft Bootstrapper configuration, property 'versionMappings' is required." },
                 tree["mcArgs"]?.coerceType(ContextNodeTypes.Array)?.list()?.mapNotNull { it.tryType(String) }
-                        ?: ArrayList()
+                        ?: ArrayList(),
+            tree["applyAssets"]?.coerceType(Boolean) ?: true
         )
     }
 

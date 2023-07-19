@@ -1,16 +1,12 @@
 package net.yakclient.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.simple.maven.HashType
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.ComponentInstance
-import net.yakclient.boot.dependency.DependencyGraph
-import net.yakclient.boot.maven.MavenDataAccess
-import net.yakclient.boot.store.CachingDataStore
 import net.yakclient.common.util.immutableLateInit
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
@@ -18,12 +14,11 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 import java.nio.channels.Channels
-import java.nio.file.Files
 import java.util.logging.Level
 import java.util.logging.Logger
 
 public enum class MinecraftRepositoryType(
-        public val settingsProvider: (String) -> SimpleMavenRepositorySettings,
+    public val settingsProvider: (String) -> SimpleMavenRepositorySettings,
 ) {
     DEFAULT({
         SimpleMavenRepositorySettings.default(it, preferredHash = HashType.SHA1)
@@ -34,8 +29,8 @@ public enum class MinecraftRepositoryType(
 }
 
 public class MinecraftBootstrapper(
-        private val boot: BootInstance,
-        private val configuration: MinecraftBootstrapperConfiguration
+    private val boot: BootInstance,
+    private val configuration: MinecraftBootstrapperConfiguration
 ) : ComponentInstance<MinecraftBootstrapperConfiguration> {
     private val logger = Logger.getLogger(this::class.simpleName)
     public var minecraftHandler: MinecraftHandler<*> by immutableLateInit()
@@ -49,7 +44,7 @@ public class MinecraftBootstrapper(
         val providerVersionsPath = cachePath resolve "minecraft-versions.json"
 
         val versionMappings = providerVersionsPath.toFile().takeIf(File::exists)
-                ?.let { ObjectMapper().readValue<Map<String, String>>(it) } ?: HashMap()
+            ?.let { ObjectMapper().readValue<Map<String, String>>(it) } ?: HashMap()
 
 //        val handler = MinecraftProviderHandler(
 //            { request, resource ->
@@ -89,32 +84,35 @@ public class MinecraftBootstrapper(
 //            )
 //        }
 
-        fun getProviderFor(mcVersion: String) : SimpleMavenDescriptor {
+        fun getProviderFor(mcVersion: String): SimpleMavenDescriptor {
             val descString = versionMappings[mcVersion] ?: run {
-                    providerVersionsPath.make()
+                providerVersionsPath.make()
 
-                    Channels.newChannel(URL(configuration.versionMappings).openStream()).use { cin ->
-                        FileOutputStream(providerVersionsPath.toFile()).use { fout: FileOutputStream ->
-                            fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
-                        }
+                Channels.newChannel(URL(configuration.versionMappings).openStream()).use { cin ->
+                    FileOutputStream(providerVersionsPath.toFile()).use { fout: FileOutputStream ->
+                        fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
                     }
+                }
 
-                    ObjectMapper().readValue<Map<String, String>>(providerVersionsPath.toFile())
-                }[mcVersion] ?: throw IllegalArgumentException("Unknown minecraft version: '$mcVersion'")
-            return SimpleMavenDescriptor.parseDescription(descString) ?: throw IllegalArgumentException("Failed to parse maven descriptor minecraft provider : '$descString'.")
+                ObjectMapper().readValue<Map<String, String>>(providerVersionsPath.toFile())
+            }[mcVersion] ?: throw IllegalArgumentException("Unknown minecraft version: '$mcVersion'")
+            return SimpleMavenDescriptor.parseDescription(descString)
+                ?: throw IllegalArgumentException("Failed to parse maven descriptor minecraft provider : '$descString'.")
         }
 
-        val graph = MinecraftHandlerDependencyGraph(cachePath,configuration.repository)
+        val graph = MinecraftHandlerDependencyGraph(cachePath, configuration.repository)
 
         val descriptor = getProviderFor(configuration.mcVersion)
 
         minecraftHandler = MinecraftHandler(
-                configuration.mcVersion,
-                cachePath,
-                graph.load(descriptor),
-                configuration.mcArgs.toTypedArray()
+            configuration.mcVersion,
+            cachePath,
+            graph.load(descriptor),
+            configuration.mcArgs.toTypedArray(),
+            configuration.applyBasicArgs
         )
     }
+
     override fun end() {
         minecraftHandler.shutdownMinecraft()
     }

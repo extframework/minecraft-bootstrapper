@@ -21,7 +21,8 @@ public class MinecraftHandler<T : MinecraftReference>(
     public val version: String,
     cache: Path,
     public val provider: MinecraftProvider<T>,
-    private val args: Array<String>
+    private val args: Array<String>,
+    private val applyBasicArgs: Boolean
 ) {
     public val minecraftReference: T = provider.getReference(version, cache)
     private lateinit var handle: MinecraftHandle
@@ -44,7 +45,21 @@ public class MinecraftHandler<T : MinecraftReference>(
     public fun startMinecraft() {
         check(!hasStarted) { "Minecraft has already started" }
         hasStarted = true
-        handle.start(args)
+
+        val actualArgs =  if (applyBasicArgs) {
+            args + arrayOf(
+                "--assetsDir",
+                minecraftReference.runtimeInfo.assetsPath.toString(),
+                "--assetIndex",
+                minecraftReference.runtimeInfo.assetsName,
+                "--gameDir",
+                minecraftReference.runtimeInfo.gameDir.toString(),
+                "--version",
+                version,
+            )
+        } else args
+
+        handle.start(actualArgs)
     }
 
     internal fun shutdownMinecraft() {
@@ -94,7 +109,7 @@ public class MinecraftHandler<T : MinecraftReference>(
             if (!isLoaded) {
                 minecraftReference.archive.writer.put(
                     entry.transform(
-                        config
+                        config, minecraftReference.libraries
                     )
                 )
             } else {
@@ -104,7 +119,7 @@ public class MinecraftHandler<T : MinecraftReference>(
                         Archives.resolve(
                             ClassReader(bytes),
                             config,
-                            AwareClassWriter(listOf(minecraftReference.archive), Archives.WRITER_FLAGS)
+                            AwareClassWriter(minecraftReference.libraries + minecraftReference.archive, Archives.WRITER_FLAGS)
                         )
                     )
                 )
