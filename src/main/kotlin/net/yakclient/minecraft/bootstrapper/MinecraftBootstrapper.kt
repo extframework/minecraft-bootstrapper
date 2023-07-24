@@ -116,6 +116,4 @@ public class MinecraftBootstrapper(
     override fun end() {
         minecraftHandler.shutdownMinecraft()
     }
-
-
 }

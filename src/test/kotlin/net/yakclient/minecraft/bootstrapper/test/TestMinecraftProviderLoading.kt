@@ -32,7 +32,7 @@ class TestMinecraftProviderLoading {
                 "--accessToken", ""
             )))
         instance.start()
-        instance.minecraftHandler.loadMinecraft()
+        instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader())
 
         instance.minecraftHandler.startMinecraft()
         println("back here")

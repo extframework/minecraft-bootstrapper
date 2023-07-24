@@ -37,9 +37,9 @@ public class MinecraftHandler<T : MinecraftReference>(
     private val updatedMixins: MutableSet<String> = HashSet()
     private val mixins: MutableMap<String, MutableList<MixinMetadata<*>>> = HashMap()
 
-    public fun loadMinecraft() {
+    public fun loadMinecraft(parent: ClassLoader) {
         check(!isLoaded) { "Minecraft is already loaded" }
-        handle = provider.get(minecraftReference)
+        handle = provider.get(minecraftReference, parent)
     }
 
     public fun startMinecraft() {

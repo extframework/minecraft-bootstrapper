@@ -16,8 +16,8 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
         return loadMinecraftRef(version, cachePath, DelegatingDataStore(LaunchMetadataDataAccess(cachePath)))
     }
 
-    override fun get(ref: DefaultMinecraftReference): MinecraftHandle {
-        val (handle, manifest) = loadMinecraft(ref)
+    override fun get(ref: DefaultMinecraftReference, parent: ClassLoader): MinecraftHandle {
+        val (handle, manifest) = loadMinecraft(ref, parent)
 
         return DefaultMinecraftHandle(handle, manifest, ref.mappings)
     }
@@ -27,7 +27,6 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
         private val manifest: LaunchMetadata,
         private val mappings: ArchiveMapping
     ) : MinecraftHandle {
-
         override fun start(args: Array<String>) {
             archive.classloader.loadClass(manifest.mainClass).getMethod("main", Array<String>::class.java)
                 .invoke(null, args)

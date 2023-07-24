@@ -36,6 +36,7 @@ public data class DefaultMinecraftReference(
 
 internal fun loadMinecraft(
     reference: DefaultMinecraftReference,
+    parent: ClassLoader
 ): Pair<ArchiveHandle, LaunchMetadata> {
     val (_, mcReference, minecraftDependencies, manifest) = reference
 
@@ -45,7 +46,7 @@ internal fun loadMinecraft(
                 mcReference
             )
         ),
-        parent = ClassLoader.getSystemClassLoader()
+        parent = parent
     )
 
     // Resolves reference
