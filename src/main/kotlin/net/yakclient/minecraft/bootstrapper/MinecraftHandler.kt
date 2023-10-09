@@ -30,6 +30,7 @@ public class MinecraftHandler<T : MinecraftReference>(
         private set
     private lateinit var handle: MinecraftHandle
     public val archive: ArchiveHandle by lazy {handle.archive}
+    public val archiveDependencies: List<ArchiveHandle> by lazy { handle.libraries }
     public var isLoaded: Boolean = false
         private set
     public var hasStarted: Boolean = false

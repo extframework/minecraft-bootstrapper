@@ -44,14 +44,16 @@ internal fun loadMinecraft(
 ): Triple<ArchiveHandle, List<ArchiveHandle>, LaunchMetadata> {
     val (_, mcReference, minecraftDependencies: List<ArchiveReference>, manifest) = reference
 
+    val dependenciesLoader = IntegratedLoader(
+        sp = DelegatingSourceProvider(minecraftDependencies.map(::ArchiveSourceProvider)),
+        parent = parent
+    )
+
     val minecraftLibraries = Archives.resolve(
         minecraftDependencies,
         Archives.Resolvers.ZIP_RESOLVER,
     ) {
-        IntegratedLoader(
-            sp = ArchiveSourceProvider(it),
-            parent = parent
-        )
+        dependenciesLoader
     }.map(ZipResolutionResult::archive)
 
     val mcLoader = IntegratedLoader(
