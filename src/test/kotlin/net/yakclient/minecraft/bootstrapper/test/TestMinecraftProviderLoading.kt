@@ -20,7 +20,7 @@ fun main() {
 
 class TestMinecraftProviderLoading {
     fun loadMinecraft(version: String) {
-        val bootInstance = testBootInstance(mapOf(), location = Path.of(this::class.java.getResource("")!!.path))
+        val bootInstance = testBootInstance(mapOf(), location = Files.createTempDirectory("Load Minecraft"))
         println(bootInstance.location)
 
         val instance = MinecraftBootstrapperFactory(bootInstance).new(MinecraftBootstrapperConfiguration(
@@ -34,7 +34,6 @@ class TestMinecraftProviderLoading {
         instance.start()
         instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader())
 
-        instance.minecraftHandler.startMinecraft()
         println("back here")
     }
 

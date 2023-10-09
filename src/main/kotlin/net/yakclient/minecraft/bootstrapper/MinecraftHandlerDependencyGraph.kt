@@ -1,12 +1,15 @@
 package net.yakclient.minecraft.bootstrapper
 
-import arrow.core.Either
-import arrow.core.right
-import com.durganmcbroom.artifact.resolver.*
+import com.durganmcbroom.artifact.resolver.ArtifactMetadata
+import com.durganmcbroom.artifact.resolver.ArtifactRequest
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
-import net.yakclient.archives.*
+import com.durganmcbroom.jobs.*
+import net.yakclient.archives.ArchiveHandle
+import net.yakclient.archives.ArchiveReference
+import net.yakclient.archives.Archives
+import net.yakclient.archives.ClassLoaderProvider
 import net.yakclient.archives.zip.ZipResolutionResult
 import net.yakclient.archives.zip.classLoaderToArchive
 import net.yakclient.boot.archive.ArchiveLoadException
@@ -28,50 +31,71 @@ private const val PROPERTY_FILE_LOCATION = "META-INF/minecraft-provider.properti
 
 private const val MINECRAFT_PROVIDER_CN = "provider-name"
 
-
 public class MinecraftHandlerDependencyGraph(
-        path: Path,
-        private val repository: SimpleMavenRepositorySettings,
-        privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
+    path: Path,
+    private val repository: SimpleMavenRepositorySettings,
+    privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
+) : MavenDependencyGraph(
+    path,
+    CachingDataStore(MavenDataAccess(path)),
+    object : ArchiveResolutionProvider<ZipResolutionResult> {
+        override fun resolve(
+            resource: Path,
+            classLoader: ClassLoaderProvider<ArchiveReference>,
+            parents: Set<ArchiveHandle>
+        ): JobResult<ZipResolutionResult, ArchiveLoadException> {
+            val ref = Archives.Finders.ZIP_FINDER.find(resource)
+            val cl = IntegratedLoader(
+                DelegatingClassProvider(parents.map(::ArchiveClassProvider)),
+                ArchiveSourceProvider(ref),
+                SecureSourceDefiner(privilegeManager),
+                this::class.java.classLoader
+            )
 
-        ): MavenDependencyGraph(
-        path,
-        CachingDataStore(MavenDataAccess(path)),
-        object : ArchiveResolutionProvider<ZipResolutionResult> {
-            override fun resolve(resource: Path, classLoader: ClassLoaderProvider<ArchiveReference>, parents: Set<ArchiveHandle>): Either<ArchiveLoadException, ZipResolutionResult> {
-                val ref = Archives.Finders.ZIP_FINDER.find(resource)
-                val cl = IntegratedLoader(
-                        DelegatingClassProvider(parents.map(::ArchiveClassProvider)),
-                        ArchiveSourceProvider(ref),
-                        SecureSourceDefiner(privilegeManager),
-                        this::class.java.classLoader
+            val run = runCatching {
+                Archives.resolve(
+                    ref,
+                    cl,
+                    Archives.Resolvers.ZIP_RESOLVER,
+                    (parents + classLoaderToArchive(MinecraftBootstrapper::class.java.classLoader))
                 )
-
-                return Archives.resolve(
-                        ref, cl, Archives.Resolvers.ZIP_RESOLVER, (parents + classLoaderToArchive(MinecraftBootstrapper::class.java.classLoader))
-                ).right()
             }
-        }, privilegeManager = privilegeManager
+
+            return if (run.isSuccess) JobResult.Success(run.getOrNull()!!)
+            else JobResult.Failure(
+                ArchiveLoadException.ArchiveLoadFailed(
+                    run.exceptionOrNull()!!.message ?: "Failed to load archive: '$resource'. "
+                )
+            )
+        }
+    }, privilegeManager = privilegeManager
 ) {
-    public fun load(descriptor: SimpleMavenDescriptor) : MinecraftProvider<*> {
-        val archive = (get(descriptor).orNull()
-                ?: run {
-                    cacherOf(repository).cache(SimpleMavenArtifactRequest(descriptor, includeScopes = setOf("compile", "runtime", "import"))).tapLeft { throw it }
-                    get(descriptor).orNull()
-                })?.archive ?: throw IllegalArgumentException("Could not cache or get minecraft provider: '${descriptor.name}'")
+    public suspend fun load(
+        descriptor: SimpleMavenDescriptor
+    ): JobResult<MinecraftProvider<*>, ArchiveLoadException> = job(JobName("Load minecraft provider: '${descriptor.name}'")) {
+        val archive = (get(descriptor).orNull() ?: run {
+             cacherOf(repository).cache(
+                SimpleMavenArtifactRequest(
+                    descriptor,
+                    includeScopes = setOf("compile", "runtime", "import")
+                )
+            ).attempt()
+
+            get(descriptor).attempt()
+        }).archive ?: throw IllegalArgumentException("Could not cache or get minecraft provider: '${descriptor.name}'")
 
         val properties =
-                checkNotNull(archive.classloader.getResourceAsStream(PROPERTY_FILE_LOCATION)) { "Failed to find Minecraft Provider properties file in given archive." }.use {
-                    Properties().apply { load(it) }
-                }
+            checkNotNull(archive.classloader.getResourceAsStream(PROPERTY_FILE_LOCATION)) { "Failed to find Minecraft Provider properties file in given archive." }.use {
+                Properties().apply { load(it) }
+            }
 
         val providerClassName = properties.getProperty(MINECRAFT_PROVIDER_CN)
-                ?: throw IllegalStateException("Invalid minecraft-provider app class name.")
+            ?: throw IllegalStateException("Invalid minecraft-provider app class name.")
 
         val clazz = archive.classloader.loadClass(providerClassName)
 
-        return clazz.getConstructor().newInstance() as? MinecraftProvider<*>
-                ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
+        clazz.getConstructor().newInstance() as? MinecraftProvider<*>
+            ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
     }
 }
 
@@ -171,11 +195,11 @@ public class MinecraftHandlerDependencyGraph(
 //}
 
 public data class MinecraftProviderRequest(
-        override val descriptor: MinecraftProviderDescriptor,
+    override val descriptor: MinecraftProviderDescriptor,
 ) : ArtifactRequest<MinecraftProviderDescriptor>
 
 public data class MinecraftProviderDescriptor(
-        val version: String,
+    val version: String,
 ) : ArtifactMetadata.Descriptor {
     override val name: String by ::version
 }

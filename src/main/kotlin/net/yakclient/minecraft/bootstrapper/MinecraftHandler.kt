@@ -1,5 +1,6 @@
 package net.yakclient.minecraft.bootstrapper
 
+import com.durganmcbroom.jobs.*
 import net.bytebuddy.agent.ByteBuddyAgent
 import net.yakclient.archives.ArchiveHandle
 import net.yakclient.archives.Archives
@@ -17,14 +18,16 @@ public data class MixinMetadata<T: MixinInjection.InjectionData>(
     val injection: MixinInjection<T>
 )
 
+
 public class MinecraftHandler<T : MinecraftReference>(
     public val version: String,
-    cache: Path,
+    private val cache: Path,
     public val provider: MinecraftProvider<T>,
     private val args: Array<String>,
     private val applyBasicArgs: Boolean
 ) {
-    public val minecraftReference: T = provider.getReference(version, cache)
+    public lateinit var minecraftReference: T
+        private set
     private lateinit var handle: MinecraftHandle
     public val archive: ArchiveHandle by lazy {handle.archive}
     public var isLoaded: Boolean = false
@@ -36,6 +39,13 @@ public class MinecraftHandler<T : MinecraftReference>(
 
     private val updatedMixins: MutableSet<String> = HashSet()
     private val mixins: MutableMap<String, MutableList<MixinMetadata<*>>> = HashMap()
+
+    internal suspend fun loadReference() : JobResult<Unit, Throwable> = jobCatching(JobName("Setup minecraft reference")) {
+         val r = provider.getReference(version, cache)
+             .attempt()
+
+        minecraftReference = r
+    }
 
     public fun loadMinecraft(parent: ClassLoader) {
         check(!isLoaded) { "Minecraft is already loaded" }

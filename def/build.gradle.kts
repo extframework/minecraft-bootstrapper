@@ -7,14 +7,6 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenCentral()
     maven {
-        name = "Durgan McBroom GitHub Packages"
-        url = uri("https://maven.pkg.github.com/durganmcbroom/artifact-resolver")
-        credentials {
-            username = project.findProperty("dm.gpr.user") as? String ?: throw IllegalArgumentException("Need a Github package registry username!")
-            password = project.findProperty("dm.gpr.key") as? String ?: throw IllegalArgumentException("Need a Github package registry key!")
-        }
-    }
-    maven {
         isAllowInsecureProtocol = true
         url = uri("http://maven.yakclient.net/snapshots")
     }
@@ -46,6 +38,11 @@ dependencies {
     implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
         isChanging = true
     }
+    implementation("com.durganmcbroom:jobs:1.0-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-logging:1.0-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-coroutines:1.0-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-progress:1.0-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-progress-simple:1.0-SNAPSHOT")
 }
 
 

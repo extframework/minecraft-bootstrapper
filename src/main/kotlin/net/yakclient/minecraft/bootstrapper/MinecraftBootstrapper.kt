@@ -1,21 +1,24 @@
 package net.yakclient.minecraft.bootstrapper
 
+import bootFactories
 import com.durganmcbroom.artifact.resolver.simple.maven.HashType
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
+import com.durganmcbroom.jobs.JobName
+import com.durganmcbroom.jobs.job
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import kotlinx.coroutines.runBlocking
 import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.ComponentInstance
 import net.yakclient.common.util.immutableLateInit
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
+import orThrow
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 import java.nio.channels.Channels
-import java.util.logging.Level
-import java.util.logging.Logger
 
 public enum class MinecraftRepositoryType(
     public val settingsProvider: (String) -> SimpleMavenRepositorySettings,
@@ -32,13 +35,10 @@ public class MinecraftBootstrapper(
     private val boot: BootInstance,
     private val configuration: MinecraftBootstrapperConfiguration
 ) : ComponentInstance<MinecraftBootstrapperConfiguration> {
-    private val logger = Logger.getLogger(this::class.simpleName)
     public var minecraftHandler: MinecraftHandler<*> by immutableLateInit()
         private set
 
     override fun start() {
-        logger.log(Level.INFO, "Minecraft Bootstrapper is enabling.")
-
         val cachePath = boot.location resolve configuration.cache
 
         val providerVersionsPath = cachePath resolve "minecraft-versions.json"
@@ -104,13 +104,19 @@ public class MinecraftBootstrapper(
 
         val descriptor = getProviderFor(configuration.mcVersion)
 
-        minecraftHandler = MinecraftHandler(
-            configuration.mcVersion,
-            cachePath,
-            graph.load(descriptor),
-            configuration.mcArgs.toTypedArray(),
-            configuration.applyBasicArgs
-        )
+        runBlocking(bootFactories()) {
+            job(JobName("Load minecraft handler")) {
+                minecraftHandler = MinecraftHandler(
+                    configuration.mcVersion,
+                    cachePath,
+                    graph.load(descriptor).attempt(),
+                    configuration.mcArgs.toTypedArray(),
+                    configuration.applyBasicArgs
+                )
+
+                 minecraftHandler.loadReference().attempt()
+            }.orThrow()
+        }
     }
 
     override fun end() {
