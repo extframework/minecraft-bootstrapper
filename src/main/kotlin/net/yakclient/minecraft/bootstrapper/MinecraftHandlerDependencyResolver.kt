@@ -12,18 +12,17 @@ import net.yakclient.archives.Archives
 import net.yakclient.archives.ClassLoaderProvider
 import net.yakclient.archives.zip.ZipResolutionResult
 import net.yakclient.archives.zip.classLoaderToArchive
-import net.yakclient.boot.archive.ArchiveLoadException
+import net.yakclient.boot.archive.ArchiveException
+import net.yakclient.boot.archive.ArchiveGraph
 import net.yakclient.boot.archive.ArchiveResolutionProvider
 import net.yakclient.boot.loader.ArchiveClassProvider
 import net.yakclient.boot.loader.ArchiveSourceProvider
 import net.yakclient.boot.loader.DelegatingClassProvider
 import net.yakclient.boot.loader.IntegratedLoader
-import net.yakclient.boot.maven.MavenDataAccess
-import net.yakclient.boot.maven.MavenDependencyGraph
+import net.yakclient.boot.maven.MavenDependencyResolver
 import net.yakclient.boot.security.PrivilegeAccess
 import net.yakclient.boot.security.PrivilegeManager
 import net.yakclient.boot.security.SecureSourceDefiner
-import net.yakclient.boot.store.CachingDataStore
 import java.nio.file.Path
 import java.util.*
 
@@ -31,19 +30,16 @@ private const val PROPERTY_FILE_LOCATION = "META-INF/minecraft-provider.properti
 
 private const val MINECRAFT_PROVIDER_CN = "provider-name"
 
-public class MinecraftHandlerDependencyGraph(
-    path: Path,
-    private val repository: SimpleMavenRepositorySettings,
+public class MinecraftHandlerDependencyResolver(
+    internal val repository: SimpleMavenRepositorySettings,
     privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
-) : MavenDependencyGraph(
-    path,
-    CachingDataStore(MavenDataAccess(path)),
+) : MavenDependencyResolver(
     object : ArchiveResolutionProvider<ZipResolutionResult> {
         override fun resolve(
             resource: Path,
             classLoader: ClassLoaderProvider<ArchiveReference>,
             parents: Set<ArchiveHandle>
-        ): JobResult<ZipResolutionResult, ArchiveLoadException> {
+        ): JobResult<ZipResolutionResult, ArchiveException> {
             val ref = Archives.Finders.ZIP_FINDER.find(resource)
             val cl = IntegratedLoader(
                 DelegatingClassProvider(parents.map(::ArchiveClassProvider)),
@@ -63,40 +59,59 @@ public class MinecraftHandlerDependencyGraph(
 
             return if (run.isSuccess) JobResult.Success(run.getOrNull()!!)
             else JobResult.Failure(
-                ArchiveLoadException.ArchiveLoadFailed(
+                ArchiveException.ArchiveLoadFailed(
                     run.exceptionOrNull()!!.message ?: "Failed to load archive: '$resource'. "
                 )
             )
         }
     }, privilegeManager = privilegeManager
-) {
-    public suspend fun load(
-        descriptor: SimpleMavenDescriptor
-    ): JobResult<MinecraftProvider<*>, ArchiveLoadException> = job(JobName("Load minecraft provider: '${descriptor.name}'")) {
-        val archive = (get(descriptor).orNull() ?: run {
-             cacherOf(repository).cache(
-                SimpleMavenArtifactRequest(
-                    descriptor,
-                    includeScopes = setOf("compile", "runtime", "import")
-                )
-            ).attempt()
+)
 
-            get(descriptor).attempt()
-        }).archive ?: throw IllegalArgumentException("Could not cache or get minecraft provider: '${descriptor.name}'")
+public suspend fun ArchiveGraph.loadProvider(
+    descriptor: SimpleMavenDescriptor,
+    resolver: MinecraftHandlerDependencyResolver
+): JobResult<MinecraftProvider<*>, ArchiveException> = job(JobName("Load minecraft provider: '${descriptor.name}'")) {
+//    if (!resolver.isCached(descriptor)) cache(
+//        SimpleMavenArtifactRequest(
+//            descriptor,
+//            includeScopes = setOf("compile", "runtime", "import")
+//        ),
+//        resolver.repository
+//    ).attempt()
+//
+//    val archive = load(descriptor).attempt().archive ?: throw IllegalArgumentException("Could not cache or get minecraft provider: '${descriptor.name}'")
+   cache(
+       SimpleMavenArtifactRequest(descriptor,includeScopes = setOf("compile", "runtime", "import")),
+       resolver.repository,
+       resolver
+   ).attempt()
+   val archive =  get(descriptor, resolver).attempt().archive ?: fail(ArchiveException.IllegalState("Minecraft provider has no archive! ('${descriptor}')"))
 
-        val properties =
-            checkNotNull(archive.classloader.getResourceAsStream(PROPERTY_FILE_LOCATION)) { "Failed to find Minecraft Provider properties file in given archive." }.use {
-                Properties().apply { load(it) }
-            }
+//    val archive = get(
+//        descriptor,
+//        {
+//            SimpleMavenArtifactRequest(
+//                it,
+//                includeScopes = setOf("compile", "runtime", "import")
+//            )
+//        },
+//        resolver
+//    ) {
+//        resolver.repository
+//    }.attempt().archive ?: fail(ArchiveException.IllegalState("Minecraft provider has no archive! ('${descriptor}')"))
 
-        val providerClassName = properties.getProperty(MINECRAFT_PROVIDER_CN)
-            ?: throw IllegalStateException("Invalid minecraft-provider app class name.")
+    val properties =
+        checkNotNull(archive.classloader.getResourceAsStream(PROPERTY_FILE_LOCATION)) { "Failed to find Minecraft Provider properties file in given archive." }.use {
+            Properties().apply { load(it) }
+        }
 
-        val clazz = archive.classloader.loadClass(providerClassName)
+    val providerClassName = properties.getProperty(MINECRAFT_PROVIDER_CN)
+        ?: throw IllegalStateException("Invalid minecraft-provider app class name.")
 
-        clazz.getConstructor().newInstance() as? MinecraftProvider<*>
-            ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
-    }
+    val clazz = archive.classloader.loadClass(providerClassName)
+
+    clazz.getConstructor().newInstance() as? MinecraftProvider<*>
+        ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
 }
 
 //public class MinecraftProviderHandler<T : ArtifactMetadata.Descriptor, R : ArtifactRequest<T>, S : RepositorySettings>(

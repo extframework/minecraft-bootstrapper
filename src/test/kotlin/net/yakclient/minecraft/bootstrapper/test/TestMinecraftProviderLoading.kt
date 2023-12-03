@@ -20,7 +20,7 @@ fun main() {
 
 class TestMinecraftProviderLoading {
     fun loadMinecraft(version: String) {
-        val bootInstance = testBootInstance(mapOf(), location = Files.createTempDirectory("Load Minecraft"))
+        val bootInstance = testBootInstance(mapOf(), location = Path.of("test-run"))
         println(bootInstance.location)
 
         val instance = MinecraftBootstrapperFactory(bootInstance).new(MinecraftBootstrapperConfiguration(
@@ -29,7 +29,7 @@ class TestMinecraftProviderLoading {
             "mc",
             this::class.java.getResource("/mc-version-test-mappings.json")!!.toString(),
             listOf(
-                "--accessToken", ""
+                "--accessToken", ""Up
             )))
         instance.start()
         instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader())

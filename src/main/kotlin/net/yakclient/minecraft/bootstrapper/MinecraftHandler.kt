@@ -12,6 +12,7 @@ import org.objectweb.asm.ClassReader
 import java.lang.instrument.ClassDefinition
 import java.nio.file.Path
 import net.yakclient.archives.transform.TransformerConfig.Companion.plus
+import net.yakclient.boot.archive.ArchiveGraph
 
 public data class MixinMetadata<T: MixinInjection.InjectionData>(
     val data: T,
@@ -24,7 +25,8 @@ public class MinecraftHandler<T : MinecraftReference>(
     private val cache: Path,
     public val provider: MinecraftProvider<T>,
     private val args: Array<String>,
-    private val applyBasicArgs: Boolean
+    private val applyBasicArgs: Boolean,
+    private val archiveGraph: ArchiveGraph
 ) {
     public lateinit var minecraftReference: T
         private set
@@ -50,7 +52,7 @@ public class MinecraftHandler<T : MinecraftReference>(
 
     public fun loadMinecraft(parent: ClassLoader) {
         check(!isLoaded) { "Minecraft is already loaded" }
-        handle = provider.get(minecraftReference, parent)
+        handle = provider.get(minecraftReference,archiveGraph, parent)
     }
 
     public fun startMinecraft() {

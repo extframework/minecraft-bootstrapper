@@ -1,15 +1,21 @@
 package net.yakclient.minecraft.provider.def
 
+import bootFactories
+import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.JobResult
+import com.durganmcbroom.jobs.job
+import kotlinx.coroutines.runBlocking
 import net.yakclient.archive.mapper.ArchiveMapping
 import net.yakclient.archive.mapper.ClassIdentifier
 import net.yakclient.archive.mapper.MappingType
 import net.yakclient.archive.mapper.MethodIdentifier
 import net.yakclient.archives.ArchiveHandle
+import net.yakclient.boot.archive.ArchiveGraph
 import net.yakclient.boot.store.DelegatingDataStore
 import net.yakclient.launchermeta.handler.LaunchMetadata
 import net.yakclient.minecraft.bootstrapper.MinecraftHandle
 import net.yakclient.minecraft.bootstrapper.MinecraftProvider
+import orThrow
 import java.nio.file.Path
 
 public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftReference> {
@@ -17,10 +23,12 @@ public class DefaultMinecraftProvider : MinecraftProvider<DefaultMinecraftRefere
         return loadMinecraftRef(version, cachePath, DelegatingDataStore(LaunchMetadataDataAccess(cachePath)))
     }
 
-    override fun get(ref: DefaultMinecraftReference, parent: ClassLoader): MinecraftHandle {
-        val (handle, libraries, manifest) = loadMinecraft(ref, parent)
+    override fun get(ref: DefaultMinecraftReference, archiveGraph: ArchiveGraph, parent: ClassLoader): MinecraftHandle {
+        return runBlocking(bootFactories() + JobName("Resolve minecraft reference ('${ref.version}') into handle")) {
+            val (handle, libraries, manifest) = loadMinecraft(ref, parent, archiveGraph).orThrow()
 
-        return DefaultMinecraftHandle(handle, libraries, manifest, ref.mappings)
+            DefaultMinecraftHandle(handle, libraries, manifest, ref.mappings)
+        }
     }
 
     private class DefaultMinecraftHandle(

@@ -100,7 +100,7 @@ public class MinecraftBootstrapper(
                 ?: throw IllegalArgumentException("Failed to parse maven descriptor minecraft provider : '$descString'.")
         }
 
-        val graph = MinecraftHandlerDependencyGraph(cachePath, configuration.repository)
+        val resolver = MinecraftHandlerDependencyResolver(configuration.repository)
 
         val descriptor = getProviderFor(configuration.mcVersion)
 
@@ -109,9 +109,11 @@ public class MinecraftBootstrapper(
                 minecraftHandler = MinecraftHandler(
                     configuration.mcVersion,
                     cachePath,
-                    graph.load(descriptor).attempt(),
+                    boot.archiveGraph.loadProvider(descriptor, resolver).attempt(),
+//                    graph.(descriptor).attempt(),
                     configuration.mcArgs.toTypedArray(),
-                    configuration.applyBasicArgs
+                    configuration.applyBasicArgs,
+                    boot.archiveGraph
                 )
 
                  minecraftHandler.loadReference().attempt()

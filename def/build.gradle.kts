@@ -21,12 +21,7 @@ dependencies {
     implementation("net.yakclient:archive-mapper:1.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("net.yakclient:boot:1.0-SNAPSHOT") {
-        exclude(group = "com.durganmcbroom", module = "artifact-resolver")
-        exclude(group = "com.durganmcbroom", module = "artifact-resolver-simple-maven")
-
-        exclude(group = "com.durganmcbroom", module = "artifact-resolver-jvm")
-        exclude(group = "com.durganmcbroom", module = "artifact-resolver-simple-maven-jvm")
+    implementation("net.yakclient:boot:1.1-SNAPSHOT") {
         isChanging = true
     }
     implementation("com.durganmcbroom:artifact-resolver:1.0-SNAPSHOT") {
@@ -38,6 +33,8 @@ dependencies {
     implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
         isChanging = true
     }
+    implementation("io.arrow-kt:arrow-core:1.1.2")
+
     implementation("com.durganmcbroom:jobs:1.0-SNAPSHOT")
     implementation("com.durganmcbroom:jobs-logging:1.0-SNAPSHOT")
     implementation("com.durganmcbroom:jobs-coroutines:1.0-SNAPSHOT")
