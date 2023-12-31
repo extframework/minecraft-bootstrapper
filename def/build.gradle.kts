@@ -92,6 +92,7 @@ publishing {
                         "jackson-module-kotlin",
                         "archives",
                         "archive-mapper",
+                        "archive-mapper-proguard",
                         "common-util",
                     )
 
