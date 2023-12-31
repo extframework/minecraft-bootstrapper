@@ -9,7 +9,7 @@ import java.nio.file.Path
 public interface MinecraftReference {
     public val version: String
     public val archive: ArchiveReference
-    public val mappings: ArchiveMapping
+    public val mappings: Path
     public val libraries: List<ArchiveReference>
     public val runtimeInfo: GameRuntimeInfo
 

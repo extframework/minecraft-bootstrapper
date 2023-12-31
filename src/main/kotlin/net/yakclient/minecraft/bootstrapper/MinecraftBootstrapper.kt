@@ -111,8 +111,8 @@ public class MinecraftBootstrapper(
                     cachePath,
                     boot.archiveGraph.loadProvider(descriptor, resolver).attempt(),
 //                    graph.(descriptor).attempt(),
-                    configuration.mcArgs.toTypedArray(),
-                    configuration.applyBasicArgs,
+//                    configuration.mcArgs.toTypedArray(),
+//                    configuration.applyBasicArgs,
                     boot.archiveGraph
                 )
 

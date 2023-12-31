@@ -28,12 +28,15 @@ class TestMinecraftProviderLoading {
             SimpleMavenRepositorySettings.local(preferredHash = HashType.SHA1),
             "mc",
             this::class.java.getResource("/mc-version-test-mappings.json")!!.toString(),
-            listOf(
-                "--accessToken", ""Up
-            )))
+//            listOf(
+//                "--accessToken", ""
+            ))
         instance.start()
         instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader())
 
+        instance.minecraftHandler.startMinecraft(arrayOf(
+            "--accessToken", ""
+        ))
         println("back here")
     }
 

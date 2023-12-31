@@ -5,42 +5,31 @@ import arrow.core.left
 import arrow.core.right
 import com.durganmcbroom.artifact.resolver.*
 import com.durganmcbroom.artifact.resolver.simple.maven.*
-import com.durganmcbroom.artifact.resolver.simple.maven.pom.PomData
 import com.durganmcbroom.artifact.resolver.simple.maven.pom.PomRepository
 import com.durganmcbroom.jobs.*
 import com.durganmcbroom.jobs.logging.info
 import com.durganmcbroom.jobs.progress.status
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import net.yakclient.archive.mapper.ArchiveMapping
-import net.yakclient.archive.mapper.parsers.ProGuardMappingParser
 import net.yakclient.archives.ArchiveHandle
 import net.yakclient.archives.ArchiveReference
 import net.yakclient.archives.Archives
-import net.yakclient.archives.ClassLoaderProvider
-import net.yakclient.archives.zip.ZipResolutionResult
 import net.yakclient.boot.archive.*
 import net.yakclient.boot.dependency.DependencyNode
-import net.yakclient.boot.dependency.DependencyResolver
-import net.yakclient.boot.loader.ArchiveSourceProvider
-import net.yakclient.boot.loader.IntegratedLoader
-import net.yakclient.boot.loader.SourceProvider
+import net.yakclient.boot.loader.*
 import net.yakclient.boot.maven.MavenDependencyResolver
-import net.yakclient.boot.maven.MavenLikeResolver
 import net.yakclient.boot.store.DataStore
 import net.yakclient.common.util.copyTo
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
-import net.yakclient.common.util.resource.ExternalResource
 import net.yakclient.launchermeta.handler.*
 import net.yakclient.minecraft.bootstrapper.MinecraftReference
 import java.io.File
-import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.file.Path
-import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashSet
 import kotlin.io.path.inputStream
 import kotlin.reflect.KClass
 
@@ -51,58 +40,19 @@ public data class DefaultMinecraftReference(
     override val archive: ArchiveReference,
     override val libraries: List<ArchiveReference>,
     val manifest: LaunchMetadata,
-    override val mappings: ArchiveMapping,
+    override val mappings: Path,
     override val runtimeInfo: MinecraftReference.GameRuntimeInfo,
-
     internal val libraryDescriptors: Map<SimpleMavenDescriptor, ArchiveReference>
 ) : MinecraftReference
 
 // Pretty much just a repeat of DelegatingSourceProvider in boot unfortunately
-public class MutableArchiveSourceProvider(
-    private val delegates: MutableList<SourceProvider>
-) : SourceProvider {
-    private fun <V, K> Iterable<V>.flatGroupBy(transformer: (V) -> Iterable<K>): Map<K, List<V>> =
-        flatMap { v -> transformer(v).map { it to v } }.groupBy { it.first }
-            .mapValues { p -> p.value.map { it.second } }
-
-    override val packages: Set<String>
-        get() = delegates.flatMapTo(HashSet(), SourceProvider::packages)
-    private val packageMap: Map<String, List<SourceProvider>>
-        get() = delegates.flatGroupBy { it.packages }
-
-    override fun getSource(name: String): ByteBuffer? =
-        packageMap[name.substring(0, name.lastIndexOf('.')
-            .let { if (it == -1) 0 else it })]?.firstNotNullOfOrNull { it.getSource(name) }
-
-    override fun getResource(name: String): URL? =
-        delegates.firstNotNullOfOrNull { it.getResource(name) }
-
-    override fun getResource(name: String, module: String): URL? =
-        delegates.firstNotNullOfOrNull { it.getResource(name, module) }
-
-    public fun add(provider: SourceProvider) {
-        delegates.add(provider)
-    }
-
-}
-
 private val mcRepo = SimpleMavenRepositorySettings.mavenCentral()
 
-public class MutableClassLoader(
-    private val sources: MutableArchiveSourceProvider,
-    parent: ClassLoader
-) : IntegratedLoader(sp = sources, parent = parent) {
-    public fun addSource(archive: ArchiveReference) {
-        sources.add(ArchiveSourceProvider(archive))
-    }
-}
 
 public class MinecraftDependencyResolver(
     private val reference: DefaultMinecraftReference,
-    parent: ClassLoader
+    private val classloader: MutableClassLoader
 ) : MavenDependencyResolver(ZipResolutionProvider) {
-    private val classloader = MutableClassLoader(MutableArchiveSourceProvider(ArrayList()), parent)
-
     private fun SimpleMavenDescriptor.isMinecraft(): Boolean {
         return group == "net.minecraft" && artifact == "minecraft"
     }
@@ -115,7 +65,7 @@ public class MinecraftDependencyResolver(
                 return object : SimpleMavenArtifactRepository(
                     f,
                     object : SimpleMavenMetadataHandler(settings) {
-                        override fun requestMetadata(desc: SimpleMavenDescriptor): arrow.core.Either<MetadataRequestException, SimpleMavenArtifactMetadata> {
+                        override fun requestMetadata(desc: SimpleMavenDescriptor): Either<MetadataRequestException, SimpleMavenArtifactMetadata> {
                             return if (desc.isMinecraft()) {
                                 return SimpleMavenArtifactMetadata(
                                     desc,
@@ -168,7 +118,7 @@ public class MinecraftDependencyResolver(
         resolver: ChildResolver
     ): JobResult<DependencyNode, ArchiveException> = jobScope {
         if (data.descriptor.isMinecraft()) {
-            classloader.addSource(reference.archive)
+            classloader.addSource(ArchiveSourceProvider(reference.archive))
 
             val children = data.children.map {
                 resolver.load(it.descriptor as SimpleMavenDescriptor, this@MinecraftDependencyResolver)
@@ -190,6 +140,7 @@ public class MinecraftDependencyResolver(
             val archive = reference.libraryDescriptors[data.descriptor]
                 ?: throw java.lang.IllegalStateException("Unknown minecraft library: '${data.descriptor}'")
 
+            classloader.addSource(ArchiveSourceProvider(archive))
             val handle = Archives.resolve(
                 archive,
                 classloader,
@@ -204,94 +155,18 @@ public class MinecraftDependencyResolver(
             )
         }
     }
-
-//    override suspend fun load(descriptor: SimpleMavenDescriptor): JobResult<DependencyNode, ArchiveException> =
-//        job(JobName("Load minecraft library: '$descriptor'")) {
-//            if (descriptor.group == "net.minecraft" && descriptor.artifact == "minecraft") {
-//                val archiveRef = reference.archive
-//
-//                val children = reference.libraryDescriptors.mapTo(HashSet()) { load(it.key).attempt() }
-//
-//                classloader.addSource(archiveRef)
-//                val handle = Archives.resolve(
-//                    archiveRef,
-//                    classloader,
-//                    Archives.Resolvers.ZIP_RESOLVER,
-//                    children.flatMapTo(HashSet()) { it.handleOrChildren() }
-//                )
-//
-//                DependencyNode(
-//                    handle.archive,
-//                    children,
-//                    descriptor
-//                )
-//            } else {
-//                val archiveRef =
-//                    reference.libraryDescriptors[descriptor] ?: fail(ArchiveLoadException.ArtifactNotCached)
-//
-//                classloader.addSource(archiveRef)
-//                val handle = Archives.resolve(
-//                    archiveRef,
-//                    classloader,
-//                    Archives.Resolvers.ZIP_RESOLVER
-//                )
-//
-//                DependencyNode(
-//                    handle.archive,
-//                    setOf(),
-//                    descriptor
-//                )
-//            }
-//        }
-
-
-//    override suspend fun cache(
-//        request: SimpleMavenArtifactRequest,
-//        repository: SimpleMavenRepositorySettings
-//    ): JobResult<Unit, ArchiveLoadException> {
-//        return JobResult.Failure(ArchiveLoadException.IllegalState("Cannot call cache here :("))
-//    }
 }
 
 
 internal suspend fun loadMinecraft(
     reference: DefaultMinecraftReference,
-    parent: ClassLoader,
+    classLoader: MutableClassLoader,
     archiveGraph: ArchiveGraph
 ): JobResult<Triple<ArchiveHandle, List<ArchiveHandle>, LaunchMetadata>, ArchiveException> =
     job(JobName("Load minecraft and dependencies ('${reference.version}')'")) {
-//    val (_, mcReference, minecraftDependencies: List<ArchiveReference>, manifest) = reference
-
-//    val dependenciesLoader = IntegratedLoader(
-//        sp = DelegatingSourceProvider(minecraftDependencies.map(::ArchiveSourceProvider)),
-//        parent = parent
-//    )
-//
-//    val minecraftLibraries = Archives.resolve(
-//        minecraftDependencies,
-//        Archives.Resolvers.ZIP_RESOLVER,
-//    ) {
-//        dependenciesLoader
-//    }.map(ZipResolutionResult::archive)
-//
-//    val mcLoader = IntegratedLoader(
-//        sp = ArchiveSourceProvider(
-//            mcReference
-//        ),
-//        cp = DelegatingClassProvider(minecraftLibraries.map(::ArchiveClassProvider)),
-//        parent = parent
-//    )
-//
-//    // Resolves reference
-//    val minecraft = Archives.resolve(
-//        mcReference,
-//        mcLoader,
-//        Archives.Resolvers.ZIP_RESOLVER,
-//        minecraftLibraries.toSet(),
-//    )
         val mcDesc = SimpleMavenDescriptor.parseDescription("net.minecraft:minecraft:${reference.version}")!!
 
-        val resolver = MinecraftDependencyResolver(reference, parent)
+        val resolver = MinecraftDependencyResolver(reference, classLoader)
         archiveGraph.cache(
             SimpleMavenArtifactRequest(mcDesc, includeScopes = setOf("mclib")),
             mcRepo,
@@ -420,7 +295,7 @@ internal suspend fun loadMinecraftRef(
         mcReference,
         awaitedDependencyMap.values.toList(),
         metadata,
-        ProGuardMappingParser.parse(mappingsPath.inputStream()),
+        mappingsPath,
         MinecraftReference.GameRuntimeInfo(
             assetsPath,
             metadata.assetIndex.id,

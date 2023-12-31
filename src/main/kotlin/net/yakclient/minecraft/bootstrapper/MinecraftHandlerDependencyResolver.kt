@@ -15,6 +15,7 @@ import net.yakclient.archives.zip.classLoaderToArchive
 import net.yakclient.boot.archive.ArchiveException
 import net.yakclient.boot.archive.ArchiveGraph
 import net.yakclient.boot.archive.ArchiveResolutionProvider
+import net.yakclient.boot.archive.ArchiveTrace
 import net.yakclient.boot.loader.ArchiveClassProvider
 import net.yakclient.boot.loader.ArchiveSourceProvider
 import net.yakclient.boot.loader.DelegatingClassProvider
@@ -35,17 +36,17 @@ public class MinecraftHandlerDependencyResolver(
     privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
 ) : MavenDependencyResolver(
     object : ArchiveResolutionProvider<ZipResolutionResult> {
-        override fun resolve(
-            resource: Path,
-            classLoader: ClassLoaderProvider<ArchiveReference>,
-            parents: Set<ArchiveHandle>
-        ): JobResult<ZipResolutionResult, ArchiveException> {
+        override suspend fun resolve(
+        resource: Path,
+        classLoader: ClassLoaderProvider<ArchiveReference>,
+        parents: Set<ArchiveHandle>
+        ): JobResult<ZipResolutionResult, ArchiveException> = jobScope {
             val ref = Archives.Finders.ZIP_FINDER.find(resource)
             val cl = IntegratedLoader(
-                DelegatingClassProvider(parents.map(::ArchiveClassProvider)),
+                DelegatingClassProvider(parents.map(::ArchiveClassProvider) ),
                 ArchiveSourceProvider(ref),
-                SecureSourceDefiner(privilegeManager),
-                this::class.java.classLoader
+                SecureSourceDefiner(privilegeManager, resource.toUri()),
+                MinecraftBootstrapper::class.java.classLoader
             )
 
             val run = runCatching {
@@ -57,12 +58,10 @@ public class MinecraftHandlerDependencyResolver(
                 )
             }
 
-            return if (run.isSuccess) JobResult.Success(run.getOrNull()!!)
-            else JobResult.Failure(
-                ArchiveException.ArchiveLoadFailed(
-                    run.exceptionOrNull()!!.message ?: "Failed to load archive: '$resource'. "
-                )
-            )
+            if (run.isSuccess) run.getOrNull()!!
+            else fail(ArchiveException.ArchiveLoadFailed(
+                run.exceptionOrNull()!!.message ?: "Failed to load archive: '$resource'. ", jobElement(ArchiveTrace)
+            ))
         }
     }, privilegeManager = privilegeManager
 )
@@ -80,12 +79,13 @@ public suspend fun ArchiveGraph.loadProvider(
 //    ).attempt()
 //
 //    val archive = load(descriptor).attempt().archive ?: throw IllegalArgumentException("Could not cache or get minecraft provider: '${descriptor.name}'")
-   cache(
-       SimpleMavenArtifactRequest(descriptor,includeScopes = setOf("compile", "runtime", "import")),
-       resolver.repository,
-       resolver
-   ).attempt()
-   val archive =  get(descriptor, resolver).attempt().archive ?: fail(ArchiveException.IllegalState("Minecraft provider has no archive! ('${descriptor}')"))
+    cache(
+        SimpleMavenArtifactRequest(descriptor, includeScopes = setOf("compile", "runtime", "import")),
+        resolver.repository,
+        resolver
+    ).attempt()
+    val archive = get(descriptor, resolver).attempt().archive
+        ?: fail(ArchiveException.IllegalState("Minecraft provider has no archive! ('${descriptor}')", ArchiveTrace(descriptor, null)))
 
 //    val archive = get(
 //        descriptor,

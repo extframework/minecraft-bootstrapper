@@ -28,9 +28,9 @@ public class MinecraftBootstrapperFactory(boot: BootInstance) : ComponentFactory
                 },
                 tree["cache"]?.coerceType(String).coerceNotNull { "Invalid Minecraft Bootstrapper configuration, property 'cache' is required." },
                 tree["versionMappings"]?.coerceType(String).coerceNotNull { "Invalid Minecraft Bootstrapper configuration, property 'versionMappings' is required." },
-                tree["mcArgs"]?.coerceType(ContextNodeTypes.Array)?.list()?.mapNotNull { it.tryType(String) }
-                        ?: ArrayList(),
-            tree["applyAssets"]?.coerceType(Boolean) ?: true
+//                tree["mcArgs"]?.coerceType(ContextNodeTypes.Array)?.list()?.mapNotNull { it.tryType(String) }
+//                        ?: ArrayList(),
+//            tree["applyAssets"]?.coerceType(Boolean) ?: true
         )
     }
 

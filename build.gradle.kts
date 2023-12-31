@@ -1,9 +1,9 @@
 import org.w3c.dom.NodeList
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.9.21"
     id("maven-publish")
-    id("org.jetbrains.dokka") version "1.6.0"
+    id("org.jetbrains.dokka") version "1.9.10"
 }
 
 group = "net.yakclient.components"
@@ -30,7 +30,7 @@ dependencies {
         isChanging = true
     }
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
-    implementation("net.yakclient:archive-mapper:1.1-SNAPSHOT")
+    implementation("net.yakclient:archive-mapper:1.2-SNAPSHOT")
     testImplementation("net.yakclient:boot-test:1.1-SNAPSHOT")
     implementation("net.yakclient:object-container:1.0-SNAPSHOT")
     implementation("com.durganmcbroom:jobs:1.0-SNAPSHOT") {
