@@ -6,6 +6,7 @@ import com.durganmcbroom.artifact.resolver.simple.maven.layout.mavenLocal
 import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.artifact.SoftwareComponentDescriptor
 import net.yakclient.boot.test.testBootInstance
+import net.yakclient.minecraft.bootstrapper.ExtraClassProvider
 import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperConfiguration
 import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperFactory
 import java.io.File
@@ -32,10 +33,21 @@ class TestMinecraftProviderLoading {
 //                "--accessToken", ""
             ))
         instance.start()
-        instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader())
+        instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader(), object : ExtraClassProvider {
+            override fun getByteArray(name: String): ByteArray? {
+                return null
+            }
+        })
 
         instance.minecraftHandler.startMinecraft(arrayOf(
-            "--accessToken", ""
+            "--version", "1.20.1",
+            "--assetsDir",
+            instance.minecraftHandler.minecraftReference.runtimeInfo.assetsPath.toString() + "/",
+            "--assetIndex",
+            instance.minecraftHandler.minecraftReference.runtimeInfo.assetsName,
+            "--gameDir",
+            instance.minecraftHandler.minecraftReference.runtimeInfo.gameDir.toString(),
+            "--accessToken", "",
         ))
         println("back here")
     }

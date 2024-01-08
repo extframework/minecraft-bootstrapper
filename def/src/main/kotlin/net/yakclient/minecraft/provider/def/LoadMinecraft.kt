@@ -22,12 +22,15 @@ import net.yakclient.boot.store.DataStore
 import net.yakclient.common.util.copyTo
 import net.yakclient.common.util.make
 import net.yakclient.common.util.resolve
+import net.yakclient.common.util.resource.ExternalResource
 import net.yakclient.launchermeta.handler.*
 import net.yakclient.minecraft.bootstrapper.MinecraftReference
 import java.io.File
+import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.file.Path
+import java.util.HexFormat
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 import kotlin.io.path.inputStream
@@ -243,11 +246,11 @@ internal suspend fun loadMinecraftRef(
                     async {
                         val assetPath = assetsObjectsPath resolve asset.checksum.take(2) resolve asset.checksum
                         if (assetPath.make()) {
-//                            ExternalResource(
-//                                URI.create("$MINECRAFT_RESOURCES_URL/${asset.checksum.take(2)}/${asset.checksum}"),
-//                                HexFormat.of().parseHex(asset.checksum),
-//                                "SHA1"
-//                            ) copyTo assetPath
+                            ExternalResource(
+                                URI.create("$MINECRAFT_RESOURCES_URL/${asset.checksum.take(2)}/${asset.checksum}"),
+                                HexFormat.of().parseHex(asset.checksum),
+                                "SHA1"
+                            ) copyTo assetPath
 
                             status(update) { "Downloaded asset: '$name'" }
                         }

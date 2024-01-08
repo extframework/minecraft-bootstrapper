@@ -1,35 +1,34 @@
 package net.yakclient.minecraft.bootstrapper
 
 import com.durganmcbroom.jobs.*
-import net.bytebuddy.agent.ByteBuddyAgent
+import net.yakclient.archives.ArchiveTree
 import net.yakclient.archives.Archives
-import net.yakclient.archives.mixin.MixinInjection
 import net.yakclient.archives.transform.AwareClassWriter
-import net.yakclient.archives.transform.TransformerConfig
-import net.yakclient.common.util.readInputStream
 import org.objectweb.asm.ClassReader
-import java.lang.instrument.ClassDefinition
 import java.nio.file.Path
-import net.yakclient.archives.transform.TransformerConfig.Companion.plus
 import net.yakclient.boot.archive.ArchiveGraph
 import net.yakclient.boot.loader.MutableClassLoader
 import net.yakclient.boot.loader.MutableClassProvider
 import net.yakclient.boot.loader.MutableSourceProvider
 import net.yakclient.boot.loader.SourceDefiner
 import net.yakclient.common.util.toBytes
-import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 import java.nio.ByteBuffer
 import java.security.ProtectionDomain
-import kotlin.math.min
 
 //public data class MixinMetadata<T: MixinInjection.InjectionData>(
 //    val data: T,
 //    val injection: MixinInjection<T>
 //)
 
-public fun interface MinecraftClassTransformer {
+public interface MinecraftClassTransformer {
+    public val trees: List<ArchiveTree>
+
     public fun transform(node: ClassNode): ClassNode
+}
+
+public interface ExtraClassProvider {
+    public fun getByteArray(name: String): ByteArray?
 }
 
 
@@ -51,7 +50,7 @@ public class MinecraftHandler<T : MinecraftReference>(
     public var hasStarted: Boolean = false
         private set
 
-    private val instrumentation = ByteBuddyAgent.install()
+//    private val instrumentation = ByteBuddyAgent.install()
 
     //    private val updatedMixins: MutableSet<String> = HashSet()
     private val mixins: MutableMap<String, MutableList<MinecraftClassTransformer>> = HashMap()
@@ -64,7 +63,7 @@ public class MinecraftHandler<T : MinecraftReference>(
             minecraftReference = r
         }
 
-    public fun loadMinecraft(parent: ClassLoader) {
+    public fun loadMinecraft(parent: ClassLoader, extraClassProvider: ExtraClassProvider) {
         check(!isLoaded) { "Minecraft is already loaded" }
         handle = provider.get(
             minecraftReference, archiveGraph,
@@ -80,9 +79,11 @@ public class MinecraftHandler<T : MinecraftReference>(
                             )
                         }) { acc, it -> it.transform(acc) }
 
-
                         val writer = AwareClassWriter(
-                            minecraftReference.libraries + minecraftReference.archive,
+                            (transformers.flatMapTo(
+                                HashSet(),
+                                MinecraftClassTransformer::trees
+                            ) + minecraftReference.libraries + minecraftReference.archive).toList(),
                             Archives.WRITER_FLAGS
                         )
                         transformedNode.accept(writer)
@@ -92,7 +93,13 @@ public class MinecraftHandler<T : MinecraftReference>(
                     definer.invoke(name, newBb, ProtectionDomain(null, null))
                 },
                 parent = parent,
-            ) {})
+            ) {
+                override fun tryDefine(name: String, resolve: Boolean): Class<*>? {
+                    return extraClassProvider.getByteArray(name)?.let {
+                        sd.define(name, ByteBuffer.wrap(it), this, ::defineClass)
+                    } ?: super.tryDefine(name, resolve)
+                }
+            })
     }
 
     public fun startMinecraft(args: Array<String>) {
