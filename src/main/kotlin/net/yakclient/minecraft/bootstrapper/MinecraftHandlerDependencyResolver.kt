@@ -33,37 +33,42 @@ private const val MINECRAFT_PROVIDER_CN = "provider-name"
 
 public class MinecraftHandlerDependencyResolver(
     internal val repository: SimpleMavenRepositorySettings,
-    privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
+//    privilegeManager: PrivilegeManager = PrivilegeManager(null, PrivilegeAccess.allPrivileges()) {},
 ) : MavenDependencyResolver(
-    object : ArchiveResolutionProvider<ZipResolutionResult> {
-        override suspend fun resolve(
-        resource: Path,
-        classLoader: ClassLoaderProvider<ArchiveReference>,
-        parents: Set<ArchiveHandle>
-        ): JobResult<ZipResolutionResult, ArchiveException> = jobScope {
-            val ref = Archives.Finders.ZIP_FINDER.find(resource)
-            val cl = IntegratedLoader(
-                DelegatingClassProvider(parents.map(::ArchiveClassProvider) ),
-                ArchiveSourceProvider(ref),
-                SecureSourceDefiner(privilegeManager, resource.toUri()),
-                MinecraftBootstrapper::class.java.classLoader
-            )
-
-            val run = runCatching {
-                Archives.resolve(
-                    ref,
-                    cl,
-                    Archives.Resolvers.ZIP_RESOLVER,
-                    (parents + classLoaderToArchive(MinecraftBootstrapper::class.java.classLoader))
-                )
-            }
-
-            if (run.isSuccess) run.getOrNull()!!
-            else fail(ArchiveException.ArchiveLoadFailed(
-                run.exceptionOrNull()!!.message ?: "Failed to load archive: '$resource'. ", jobElement(ArchiveTrace)
-            ))
-        }
-    }, privilegeManager = privilegeManager
+    parentClassLoader = MinecraftBootstrapper::class.java.classLoader,
+//    resolutionProvider = object : ArchiveResolutionProvider<ZipResolutionResult> {
+//        override suspend fun resolve(
+//            resource: Path,
+//            classLoader: ClassLoaderProvider<ArchiveReference>,
+//            parents: Set<ArchiveHandle>
+//        ): JobResult<ZipResolutionResult, ArchiveException> = jobScope {
+//            val ref = Archives.Finders.ZIP_FINDER.find(resource)
+//            val cl = IntegratedLoader(
+//                name = "",
+//                DelegatingClassProvider(parents.map(::ArchiveClassProvider)),
+//                ArchiveSourceProvider(ref),
+//                SecureSourceDefiner(privilegeManager, resource.toUri()),
+//                MinecraftBootstrapper::class.java.classLoader
+//            )
+//
+//            val run = runCatching {
+//                Archives.resolve(
+//                    ref,
+//                    cl,
+//                    Archives.Resolvers.ZIP_RESOLVER,
+//                    (parents + classLoaderToArchive(MinecraftBootstrapper::class.java.classLoader))
+//                )
+//            }
+//
+//            if (run.isSuccess) run.getOrNull()!!
+//            else fail(
+//                ArchiveException.ArchiveLoadFailed(
+//                    run.exceptionOrNull()!!.message ?: "Failed to load archive: '$resource'. ", jobElement(ArchiveTrace)
+//                )
+//            )
+//        }
+//    },
+//privilegeManager = privilegeManager
 )
 
 public suspend fun ArchiveGraph.loadProvider(
@@ -85,7 +90,12 @@ public suspend fun ArchiveGraph.loadProvider(
         resolver
     ).attempt()
     val archive = get(descriptor, resolver).attempt().archive
-        ?: fail(ArchiveException.IllegalState("Minecraft provider has no archive! ('${descriptor}')", ArchiveTrace(descriptor, null)))
+        ?: fail(
+            ArchiveException.IllegalState(
+                "Minecraft provider has no archive! ('${descriptor}')",
+                ArchiveTrace(descriptor, null)
+            )
+        )
 
 //    val archive = get(
 //        descriptor,

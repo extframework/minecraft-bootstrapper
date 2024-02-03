@@ -7,10 +7,7 @@ import net.yakclient.archives.transform.AwareClassWriter
 import org.objectweb.asm.ClassReader
 import java.nio.file.Path
 import net.yakclient.boot.archive.ArchiveGraph
-import net.yakclient.boot.loader.MutableClassLoader
-import net.yakclient.boot.loader.MutableClassProvider
-import net.yakclient.boot.loader.MutableSourceProvider
-import net.yakclient.boot.loader.SourceDefiner
+import net.yakclient.boot.loader.*
 import net.yakclient.common.util.toBytes
 import org.objectweb.asm.tree.ClassNode
 import java.nio.ByteBuffer
@@ -63,43 +60,59 @@ public class MinecraftHandler<T : MinecraftReference>(
             minecraftReference = r
         }
 
+
     public fun loadMinecraft(parent: ClassLoader, extraClassProvider: ExtraClassProvider) {
         check(!isLoaded) { "Minecraft is already loaded" }
         handle = provider.get(
             minecraftReference, archiveGraph,
-            object : MutableClassLoader(
-                MutableSourceProvider(ArrayList()),
-                MutableClassProvider(ArrayList()),
-                sd = SourceDefiner { name: String, bb: ByteBuffer, cl: ClassLoader, definer ->
-                    val newBb = mixins[name]?.let { transformers ->
-                        val transformedNode = transformers.fold(ClassNode().also {
-                            ClassReader(bb.toBytes()).accept(
-                                it,
-                                0
-                            )
-                        }) { acc, it -> it.transform(acc) }
+            MinecraftClassLoader(this, parent, extraClassProvider)
+        )
+    }
 
-                        val writer = AwareClassWriter(
-                            (transformers.flatMapTo(
-                                HashSet(),
-                                MinecraftClassTransformer::trees
-                            ) + minecraftReference.libraries + minecraftReference.archive).toList(),
-                            Archives.WRITER_FLAGS
-                        )
-                        transformedNode.accept(writer)
-                        ByteBuffer.wrap(writer.toByteArray())
-                    } ?: bb
+    private class MinecraftClassLoader(
+        private val handler: MinecraftHandler<*>,
+        parent: ClassLoader,
+        private val extraClassProvider: ExtraClassProvider
+    ) : MutableClassLoader(
+        name = "Minecraft classloader",
+        MutableSourceProvider(ArrayList()),
+        MutableClassProvider(ArrayList()),
+        MutableResourceProvider(ArrayList()),
+        sd = SourceDefiner { name: String, bb: ByteBuffer, cl: ClassLoader, definer ->
+            val newBb = handler.mixins[name]?.let { transformers ->
+                val transformedNode = transformers.fold(ClassNode().also {
+                    ClassReader(bb.toBytes()).accept(
+                        it,
+                        0
+                    )
+                }) { acc, it -> it.transform(acc) }
 
-                    definer.invoke(name, newBb, ProtectionDomain(null, null))
-                },
-                parent = parent,
-            ) {
-                override fun tryDefine(name: String, resolve: Boolean): Class<*>? {
-                    return extraClassProvider.getByteArray(name)?.let {
-                        sd.define(name, ByteBuffer.wrap(it), this, ::defineClass)
-                    } ?: super.tryDefine(name, resolve)
-                }
-            })
+                val writer = AwareClassWriter(
+                    (transformers.flatMapTo(
+                        HashSet(),
+                        MinecraftClassTransformer::trees
+                    ) + handler.minecraftReference.libraries + handler.minecraftReference.archive).toList(),
+                    Archives.WRITER_FLAGS
+                )
+                transformedNode.accept(writer)
+                ByteBuffer.wrap(writer.toByteArray())
+            } ?: bb
+
+            definer.invoke(name, newBb, ProtectionDomain(null, null))
+        },
+        parent = parent,
+    ) {
+        override fun tryDefine(name: String): Class<*>? {
+            return extraClassProvider.getByteArray(name)?.let {
+                sourceDefiner.define(name, ByteBuffer.wrap(it), this, ::defineClass)
+            } ?: super.tryDefine(name)
+        }
+
+        companion object {
+            init {
+                registerAsParallelCapable()
+            }
+        }
     }
 
     public fun startMinecraft(args: Array<String>) {

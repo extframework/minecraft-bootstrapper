@@ -24,7 +24,7 @@ dependencies {
     implementation("net.yakclient:archive-mapper-proguard:1.2-SNAPSHOT") {
         isChanging = true
     }
-    implementation("net.yakclient:boot:1.1-SNAPSHOT") {
+    implementation("net.yakclient:boot:2.0-SNAPSHOT") {
         isChanging = true
     }
     implementation("com.durganmcbroom:artifact-resolver:1.0-SNAPSHOT") {
@@ -94,6 +94,7 @@ publishing {
                         "archive-mapper",
                         "archive-mapper-proguard",
                         "common-util",
+                        "minecraft-bootstrapper"
                     )
 
                     val nodeList = asNode()["dependencies"] as NodeList

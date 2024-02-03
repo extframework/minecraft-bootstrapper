@@ -8,16 +8,18 @@ import com.durganmcbroom.artifact.resolver.simple.maven.*
 import com.durganmcbroom.artifact.resolver.simple.maven.pom.PomRepository
 import com.durganmcbroom.jobs.*
 import com.durganmcbroom.jobs.logging.info
-import com.durganmcbroom.jobs.progress.status
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import net.yakclient.archives.ArchiveHandle
 import net.yakclient.archives.ArchiveReference
 import net.yakclient.archives.Archives
 import net.yakclient.boot.archive.*
+import net.yakclient.boot.dependency.BasicDependencyNode
 import net.yakclient.boot.dependency.DependencyNode
 import net.yakclient.boot.loader.*
 import net.yakclient.boot.maven.MavenDependencyResolver
+import net.yakclient.boot.security.PrivilegeAccess
+import net.yakclient.boot.security.PrivilegeManager
 import net.yakclient.boot.store.DataStore
 import net.yakclient.common.util.copyTo
 import net.yakclient.common.util.make
@@ -27,14 +29,10 @@ import net.yakclient.launchermeta.handler.*
 import net.yakclient.minecraft.bootstrapper.MinecraftReference
 import java.io.File
 import java.net.URI
-import java.net.URL
-import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.util.HexFormat
-import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
-import kotlin.io.path.inputStream
-import kotlin.reflect.KClass
+import kotlin.math.floor
 
 public const val MINECRAFT_RESOURCES_URL: String = "https://resources.download.minecraft.net"
 
@@ -48,14 +46,21 @@ public data class DefaultMinecraftReference(
     internal val libraryDescriptors: Map<SimpleMavenDescriptor, ArchiveReference>
 ) : MinecraftReference
 
-// Pretty much just a repeat of DelegatingSourceProvider in boot unfortunately
-private val mcRepo = SimpleMavenRepositorySettings.mavenCentral()
+private val mcRepo =
+    SimpleMavenRepositorySettings.default(url = "https://libraries.minecraft.net", preferredHash = HashType.SHA1)
 
+
+private fun ArchiveNode<*>.handleOrParents(): List<ArchiveHandle> {
+    return archive?.let(::listOf) ?: parents.flatMap { it.handleOrParents() }
+}
 
 public class MinecraftDependencyResolver(
     private val reference: DefaultMinecraftReference,
     private val classloader: MutableClassLoader
-) : MavenDependencyResolver(ZipResolutionProvider) {
+) : MavenDependencyResolver(
+    parentClassLoader = classloader.parent,
+//    parentPrivilegeManager = PrivilegeManager(null, PrivilegeAccess.emptyPrivileges())
+) {
     private fun SimpleMavenDescriptor.isMinecraft(): Boolean {
         return group == "net.minecraft" && artifact == "minecraft"
     }
@@ -113,37 +118,52 @@ public class MinecraftDependencyResolver(
                 }
             }
         }
-    override val metadataType: KClass<SimpleMavenArtifactMetadata> = SimpleMavenArtifactMetadata::class
+
+    override val metadataType: Class<SimpleMavenArtifactMetadata> = SimpleMavenArtifactMetadata::class.java
     override val name: String = "minecraft"
-    override val nodeType: KClass<DependencyNode> = DependencyNode::class
+
     override suspend fun load(
         data: ArchiveData<SimpleMavenDescriptor, CachedArchiveResource>,
-        resolver: ChildResolver
-    ): JobResult<DependencyNode, ArchiveException> = jobScope {
+        helper: ResolutionHelper
+    ): JobResult<BasicDependencyNode, ArchiveException> = jobScope {
         if (data.descriptor.isMinecraft()) {
-            classloader.addSource(ArchiveSourceProvider(reference.archive))
+            classloader.addSources(ArchiveSourceProvider(reference.archive))
+            classloader.addResources(ArchiveResourceProvider(reference.archive))
 
-            val children = data.children.map {
-                resolver.load(it.descriptor as SimpleMavenDescriptor, this@MinecraftDependencyResolver)
+            val parents = data.parents.map {
+                helper.load(it.descriptor, this@MinecraftDependencyResolver)
             }
+
+            val acessTree =helper.newAccessTree {
+                allDirect(parents)
+            }
+
 
             val handle = Archives.resolve(
                 reference.archive,
                 classloader,
                 Archives.Resolvers.ZIP_RESOLVER,
-                children.flatMapTo(HashSet()) { it.handleOrChildren() }
+                parents.flatMapTo(HashSet()) { it.handleOrParents() }
             )
 
-            DependencyNode(
+            BasicDependencyNode(
+                data.descriptor,
                 handle.archive,
-                children.toSet(),
-                data.descriptor
+                parents.toSet(),
+                acessTree,
+                this@MinecraftDependencyResolver,
             )
         } else {
             val archive = reference.libraryDescriptors[data.descriptor]
                 ?: throw java.lang.IllegalStateException("Unknown minecraft library: '${data.descriptor}'")
 
-            classloader.addSource(ArchiveSourceProvider(archive))
+            classloader.addSources(ArchiveSourceProvider(archive))
+            classloader.addResources(ArchiveResourceProvider(archive))
+
+            val accessTree = helper.newAccessTree {
+                // TODO not correct
+            }
+
             val handle = Archives.resolve(
                 archive,
                 classloader,
@@ -151,10 +171,12 @@ public class MinecraftDependencyResolver(
                 setOf()
             )
 
-            DependencyNode(
+            BasicDependencyNode(
+                data.descriptor,
                 handle.archive,
                 setOf(),
-                data.descriptor
+                accessTree,
+                this@MinecraftDependencyResolver
             )
         }
     }
@@ -180,7 +202,7 @@ internal suspend fun loadMinecraft(
             resolver
         ).attempt()
 
-        val libraries = minecraft.children.flatMap { it.handleOrChildren() }
+        val libraries = minecraft.parents.flatMap { it.handleOrParents() }
 
         Triple(minecraft.archive!!, libraries, reference.manifest)
     }
@@ -238,21 +260,26 @@ internal suspend fun loadMinecraftRef(
 
         val objects = parseAssetIndex(assetIndexCacheResource).objects
 
-        val update = 1f / objects.size
+
 
         jobCatching(JobName("Download minecraft $mcVersion assets")) {
             objects
-                .map { (name, asset) ->
+                .entries
+                .withIndex()
+                .map { (index, entry) ->
+                    val (name, asset) = entry
                     async {
                         val assetPath = assetsObjectsPath resolve asset.checksum.take(2) resolve asset.checksum
                         if (assetPath.make()) {
+                            info("Downloading asset: '$name', ${floor(((index + 1).toFloat() / objects.size) * 100).toInt()}% done.")
+
                             ExternalResource(
                                 URI.create("$MINECRAFT_RESOURCES_URL/${asset.checksum.take(2)}/${asset.checksum}"),
                                 HexFormat.of().parseHex(asset.checksum),
                                 "SHA1"
                             ) copyTo assetPath
 
-                            status(update) { "Downloaded asset: '$name'" }
+//                            status(update) { "Downloaded asset: '$name'" }
                         }
                     }
                 }
@@ -277,7 +304,7 @@ internal suspend fun loadMinecraftRef(
 
                     if (toPath.make()) {
                         lib.downloads.artifact.toResource() copyTo toPath
-                        status(1f / libraries.size) { "Downloaded: '${desc.name}'" }
+//                        status(1f / libraries.size) { "Downloaded: '${desc.name}'" }
                     }
 
                     Archives.Finders.ZIP_FINDER.find(toPath)

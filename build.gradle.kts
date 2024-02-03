@@ -16,7 +16,7 @@ dependencies {
 
     implementation("io.arrow-kt:arrow-core:1.1.2")
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
-    implementation("net.yakclient:boot:1.1-SNAPSHOT") {
+    implementation("net.yakclient:boot:2.0-SNAPSHOT") {
         isChanging = true
     }
     implementation("com.durganmcbroom:artifact-resolver:1.0-SNAPSHOT") {
@@ -31,7 +31,7 @@ dependencies {
     }
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
     implementation("net.yakclient:archive-mapper:1.2-SNAPSHOT")
-    testImplementation("net.yakclient:boot-test:1.1-SNAPSHOT")
+    testImplementation("net.yakclient:boot-test:2.0-SNAPSHOT")
     implementation("net.yakclient:object-container:1.0-SNAPSHOT")
     implementation("com.durganmcbroom:jobs:1.0-SNAPSHOT") {
         isChanging = true
@@ -55,6 +55,12 @@ task<Jar>("sourcesJar") {
 task<Jar>("javadocJar") {
     archiveClassifier.set("javadoc")
     from(tasks.dokkaJavadoc)
+}
+
+val printDependencies by tasks.creating {
+    configurations.implementation.get().dependencies.forEach {
+        println("${it.group}:${it.name}:${it.version}")
+    }
 }
 
 publishing {
