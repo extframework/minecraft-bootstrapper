@@ -1,5 +1,3 @@
-import org.w3c.dom.NodeList
-
 plugins {
     kotlin("jvm") version "1.9.21"
     id("maven-publish")
@@ -9,40 +7,37 @@ plugins {
 group = "net.yakclient.components"
 
 dependencies {
-    implementation("net.yakclient:archives:1.1-SNAPSHOT")
+    api("net.yakclient:archives:1.1-SNAPSHOT")
     implementation("net.yakclient:archives-mixin:1.1-SNAPSHOT") {
         isChanging = true
     }
-
-    implementation("io.arrow-kt:arrow-core:1.1.2")
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
-    implementation("net.yakclient:boot:2.0-SNAPSHOT") {
+    implementation("net.yakclient:boot:2.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:artifact-resolver:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:artifact-resolver:1.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:artifact-resolver-simple-maven:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:artifact-resolver-simple-maven:1.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("net.bytebuddy:byte-buddy-agent:1.12.18")
-    implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
+    api("net.yakclient:common-util:1.1-SNAPSHOT") {
         isChanging = true
     }
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
     implementation("net.yakclient:archive-mapper:1.2-SNAPSHOT")
-    testImplementation("net.yakclient:boot-test:2.0-SNAPSHOT")
+    testImplementation("net.yakclient:boot-test:2.1-SNAPSHOT")
     implementation("net.yakclient:object-container:1.0-SNAPSHOT")
-    implementation("com.durganmcbroom:jobs:1.0-SNAPSHOT") {
+    api("com.durganmcbroom:jobs:1.2-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:jobs-logging:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:jobs-logging:1.2-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:jobs-progress:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:jobs-progress:1.2-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:jobs-progress-simple:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:jobs-progress-simple:1.2-SNAPSHOT") {
         isChanging = true
     }
 }
@@ -55,6 +50,63 @@ task<Jar>("sourcesJar") {
 task<Jar>("javadocJar") {
     archiveClassifier.set("javadoc")
     from(tasks.dokkaJavadoc)
+}
+
+abstract class ListAllDependencies : DefaultTask() {
+    init {
+        // Define the output file within the build directory
+        val outputFile = project.buildDir.resolve("resources/test/dependencies.txt")
+        outputs.file(outputFile)
+    }
+
+    @TaskAction
+    fun listDependencies() {
+        val outputFile = project.buildDir.resolve("resources/test/dependencies.txt")
+        // Ensure the directory for the output file exists
+        outputFile.parentFile.mkdirs()
+        // Clear or create the output file
+        outputFile.writeText("")
+
+        val set = HashSet<String>()
+
+        // Process each configuration that can be resolved
+        project.configurations.filter { it.isCanBeResolved }.forEach { configuration ->
+            println("Processing configuration: ${configuration.name}")
+            try {
+                configuration.resolvedConfiguration.firstLevelModuleDependencies.forEach { dependency ->
+                    collectDependencies(dependency, set)
+                }
+            } catch (e: Exception) {
+                println("Skipping configuration '${configuration.name}' due to resolution errors.")
+            }
+        }
+
+        set.add("${this.project.group}:minecraft-bootstrapper:${this.project.version}\n")
+
+        set.forEach {
+            outputFile.appendText(it)
+        }
+    }
+
+    private fun collectDependencies(dependency: ResolvedDependency, set: MutableSet<String>) {
+        set.add("${dependency.moduleGroup}:${dependency.moduleName}:${dependency.moduleVersion}\n")
+        dependency.children.forEach { childDependency ->
+            collectDependencies(childDependency, set)
+        }
+    }
+}
+
+// Register the custom task in the project
+val listAllDependencies = tasks.register<ListAllDependencies>("listAllDependencies")
+
+//tasks.register<Copy>("copyTaskOutput") {
+//    from(listAllDependencies.map { it.outputs.files.asFileTree }) // specify the directory where your task outputs files
+//    into("/build/resources/test") // specify the test resources directory
+//}
+
+// Ensure the copyTaskOutput runs before the test task
+tasks.test {
+    dependsOn(listAllDependencies)
 }
 
 val printDependencies by tasks.creating {
@@ -119,8 +171,8 @@ allprojects {
     version = "1.0-SNAPSHOT"
 
     repositories {
-        mavenCentral()
         mavenLocal()
+        mavenCentral()
         maven {
             isAllowInsecureProtocol = true
             url = uri("http://maven.yakclient.net/snapshots")

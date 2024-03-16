@@ -1,11 +1,9 @@
 package net.yakclient.minecraft.bootstrapper
 
-import com.durganmcbroom.artifact.resolver.simple.maven.HashType
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
+import com.durganmcbroom.resources.ResourceAlgorithm
 import net.yakclient.boot.BootInstance
 import net.yakclient.boot.component.ComponentFactory
-import net.yakclient.boot.component.context.ContextNodeTypes
-import net.yakclient.boot.component.context.ContextNodeTypes.Boolean
 import net.yakclient.boot.component.context.ContextNodeTypes.String
 import net.yakclient.boot.component.context.ContextNodeValue
 
@@ -21,8 +19,8 @@ public class MinecraftBootstrapperFactory(boot: BootInstance) : ComponentFactory
                     val type = tree["repositoryType"]?.coerceType(String).coerceNotNull { "Invalid Minecraft Bootstrapper configuration, property 'repositoryType' is required." }
 
                     when (type.lowercase()) {
-                        "default" -> SimpleMavenRepositorySettings.default(repo, preferredHash = HashType.SHA1)
-                        "local" -> SimpleMavenRepositorySettings.local(repo, preferredHash = HashType.SHA1)
+                        "default" -> SimpleMavenRepositorySettings.default(repo, preferredHash = ResourceAlgorithm.SHA1)
+                        "local" -> SimpleMavenRepositorySettings.local(repo, preferredHash = ResourceAlgorithm.SHA1)
                         else -> throw IllegalArgumentException("Unknown repository type: '$type'. Options are 'default' or 'local' (case-insensitive).")
                     }
                 },

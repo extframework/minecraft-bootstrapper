@@ -12,7 +12,8 @@ repositories {
     }
 }
 dependencies {
-    implementation("net.yakclient:launchermeta-handler:1.0-SNAPSHOT")
+    implementation("net.yakclient:launchermeta-handler:1.1-SNAPSHOT")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
@@ -24,25 +25,23 @@ dependencies {
     implementation("net.yakclient:archive-mapper-proguard:1.2-SNAPSHOT") {
         isChanging = true
     }
-    implementation("net.yakclient:boot:2.0-SNAPSHOT") {
+    implementation("net.yakclient:boot:2.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:artifact-resolver:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:artifact-resolver:1.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("com.durganmcbroom:artifact-resolver-simple-maven:1.0-SNAPSHOT") {
+    implementation("com.durganmcbroom:artifact-resolver-simple-maven:1.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("net.yakclient:common-util:1.0-SNAPSHOT") {
+    implementation("net.yakclient:common-util:1.1-SNAPSHOT") {
         isChanging = true
     }
-    implementation("io.arrow-kt:arrow-core:1.1.2")
 
-    implementation("com.durganmcbroom:jobs:1.0-SNAPSHOT")
-    implementation("com.durganmcbroom:jobs-logging:1.0-SNAPSHOT")
-    implementation("com.durganmcbroom:jobs-coroutines:1.0-SNAPSHOT")
-    implementation("com.durganmcbroom:jobs-progress:1.0-SNAPSHOT")
-    implementation("com.durganmcbroom:jobs-progress-simple:1.0-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs:1.2-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-logging:1.2-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-progress:1.2-SNAPSHOT")
+    implementation("com.durganmcbroom:jobs-progress-simple:1.2-SNAPSHOT")
 }
 
 
@@ -86,33 +85,33 @@ publishing {
                     yakclientRepositoryNode.appendNode("id", "yakclient")
                     yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
 
-                    val toKeep = setOf(
-                        "launchermeta-handler",
-                        "jackson-dataformat-xml",
-                        "jackson-module-kotlin",
-                        "archives",
-                        "archive-mapper",
-                        "archive-mapper-proguard",
-                        "common-util",
-                        "minecraft-bootstrapper"
-                    )
-
-                    val nodeList = asNode()["dependencies"] as NodeList
-                    (nodeList.getAt("dependency"))
-                        .map { it as Node }
-                        .forEach {
-                            (it.value() as NodeList)
-                                .map { n -> n as Node }
-                                .filter { n ->
-                                    ((n.name() as QName).localPart).contains("artifactId")
-                                }
-                                .forEach { n ->
-                                    if (!toKeep.contains(n.value() as String)) {
-                                        val parent = n.parent()
-                                        println(parent.parent().remove(parent))
-                                    }
-                                }
-                        }
+//                    val toKeep = setOf(
+//                        "launchermeta-handler",
+//                        "jackson-dataformat-xml",
+//                        "jackson-module-kotlin",
+//                        "archives",
+//                        "archive-mapper",
+//                        "archive-mapper-proguard",
+//                        "common-util",
+//                        "minecraft-bootstrapper"
+//                    )
+//
+//                    val nodeList = asNode()["dependencies"] as NodeList
+//                    (nodeList.getAt("dependency"))
+//                        .map { it as Node }
+//                        .forEach {
+//                            (it.value() as NodeList)
+//                                .map { n -> n as Node }
+//                                .filter { n ->
+//                                    ((n.name() as QName).localPart).contains("artifactId")
+//                                }
+//                                .forEach { n ->
+//                                    if (!toKeep.contains(n.value() as String)) {
+//                                        val parent = n.parent()
+//                                        println(parent.parent().remove(parent))
+//                                    }
+//                                }
+//                        }
                 }
 
                 licenses {

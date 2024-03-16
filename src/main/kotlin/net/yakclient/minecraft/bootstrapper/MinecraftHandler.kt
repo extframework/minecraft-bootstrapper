@@ -12,11 +12,7 @@ import net.yakclient.common.util.toBytes
 import org.objectweb.asm.tree.ClassNode
 import java.nio.ByteBuffer
 import java.security.ProtectionDomain
-
-//public data class MixinMetadata<T: MixinInjection.InjectionData>(
-//    val data: T,
-//    val injection: MixinInjection<T>
-//)
+import java.util.PriorityQueue
 
 public interface MinecraftClassTransformer {
     public val trees: List<ArchiveTree>
@@ -40,33 +36,27 @@ public class MinecraftHandler<T : MinecraftReference>(
     public lateinit var handle: MinecraftHandle
         private set
 
-    //    public val archive: ArchiveHandle by lazy {handle.archive}
-//    public val archiveDependencies: List<ArchiveHandle> by lazy { handle.libraries }
     public var isLoaded: Boolean = false
         private set
     public var hasStarted: Boolean = false
         private set
 
-//    private val instrumentation = ByteBuddyAgent.install()
+    private val mixins: MutableMap<String, PriorityQueue<Pair<Int, MinecraftClassTransformer>>> = HashMap()
 
-    //    private val updatedMixins: MutableSet<String> = HashSet()
-    private val mixins: MutableMap<String, MutableList<MinecraftClassTransformer>> = HashMap()
-
-    internal suspend fun loadReference(): JobResult<Unit, Throwable> =
-        jobCatching(JobName("Setup minecraft reference")) {
-            val r = provider.getReference(version, cache)
-                .attempt()
+    internal fun loadReference(): Job<Unit> =
+        job(JobName("Setup minecraft reference")) {
+            val r = provider.getReference(version, cache).invoke().merge()
 
             minecraftReference = r
         }
 
-
-    public fun loadMinecraft(parent: ClassLoader, extraClassProvider: ExtraClassProvider) {
+    public fun loadMinecraft(parent: ClassLoader, extraClassProvider: ExtraClassProvider): Job<Unit> = job {
         check(!isLoaded) { "Minecraft is already loaded" }
         handle = provider.get(
-            minecraftReference, archiveGraph,
-            MinecraftClassLoader(this, parent, extraClassProvider)
-        )
+            minecraftReference,
+            archiveGraph,
+            MinecraftClassLoader(this@MinecraftHandler, parent, extraClassProvider)
+        )().merge()
     }
 
     private class MinecraftClassLoader(
@@ -80,18 +70,17 @@ public class MinecraftHandler<T : MinecraftReference>(
         MutableResourceProvider(ArrayList()),
         sd = SourceDefiner { name: String, bb: ByteBuffer, cl: ClassLoader, definer ->
             val newBb = handler.mixins[name]?.let { transformers ->
-                val transformedNode = transformers.fold(ClassNode().also {
+                val transformedNode = (transformers).fold(ClassNode().also {
                     ClassReader(bb.toBytes()).accept(
                         it,
                         0
                     )
-                }) { acc, it -> it.transform(acc) }
+                }) { acc, it -> it.second.transform(acc) }
 
                 val writer = AwareClassWriter(
                     (transformers.flatMapTo(
                         HashSet(),
-                        MinecraftClassTransformer::trees
-                    ) + handler.minecraftReference.libraries + handler.minecraftReference.archive).toList(),
+                    ) { it.second.trees } + handler.minecraftReference.libraries + handler.minecraftReference.archive).toList(),
                     Archives.WRITER_FLAGS
                 )
                 transformedNode.accept(writer)
@@ -130,20 +119,15 @@ public class MinecraftHandler<T : MinecraftReference>(
     }
 
     public fun registerMixin(to: String, transformer: MinecraftClassTransformer) {
-        (mixins[to] ?: ArrayList<MinecraftClassTransformer>().also { mixins[to] = it }).add(transformer)
-//        check(
-//            minecraftReference.archive.reader.contains(
-//                to.replace(
-//                    '.',
-//                    '/'
-//                ) + ".class"
-//            )
-//        ) { "Class '$to' does not exist." }
-//
-//        val injects = mixins[to] ?: ArrayList<MixinMetadata<*>>().also { mixins[to] = it }
-//        injects.add(metadata)
-//
-//        updatedMixins.add(to)
+        registerMixin(to, 0, transformer)
+    }
+
+    public fun registerMixin(to: String, priority: Int, transformer: MinecraftClassTransformer) {
+        (mixins[to] ?: PriorityQueue<Pair<Int, MinecraftClassTransformer>> { first, second ->
+            second.first - first.first
+        }.also { mixins[to] = it }).add(
+            priority to transformer
+        )
     }
 
 //    public fun writeAll() {
