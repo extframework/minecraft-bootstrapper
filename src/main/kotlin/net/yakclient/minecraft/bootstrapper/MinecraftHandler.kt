@@ -41,7 +41,7 @@ public class MinecraftHandler<T : MinecraftReference>(
     public var hasStarted: Boolean = false
         private set
 
-    private val mixins: MutableMap<String, PriorityQueue<Pair<Int, MinecraftClassTransformer>>> = HashMap()
+    internal val mixins: MutableMap<String, PriorityQueue<Pair<Int, MinecraftClassTransformer>>> = HashMap()
 
     internal fun loadReference(): Job<Unit> =
         job(JobName("Setup minecraft reference")) {
@@ -55,53 +55,8 @@ public class MinecraftHandler<T : MinecraftReference>(
         handle = provider.get(
             minecraftReference,
             archiveGraph,
-            MinecraftClassLoader(this@MinecraftHandler, parent, extraClassProvider)
+            MinecraftClassLoader(mixins::get, minecraftReference.libraries + minecraftReference.archive, parent, extraClassProvider)
         )().merge()
-    }
-
-    private class MinecraftClassLoader(
-        private val handler: MinecraftHandler<*>,
-        parent: ClassLoader,
-        private val extraClassProvider: ExtraClassProvider
-    ) : MutableClassLoader(
-        name = "Minecraft classloader",
-        MutableSourceProvider(ArrayList()),
-        MutableClassProvider(ArrayList()),
-        MutableResourceProvider(ArrayList()),
-        sd = SourceDefiner { name: String, bb: ByteBuffer, cl: ClassLoader, definer ->
-            val newBb = handler.mixins[name]?.let { transformers ->
-                val transformedNode = (transformers).fold(ClassNode().also {
-                    ClassReader(bb.toBytes()).accept(
-                        it,
-                        0
-                    )
-                }) { acc, it -> it.second.transform(acc) }
-
-                val writer = AwareClassWriter(
-                    (transformers.flatMapTo(
-                        HashSet(),
-                    ) { it.second.trees } + handler.minecraftReference.libraries + handler.minecraftReference.archive).toList(),
-                    Archives.WRITER_FLAGS
-                )
-                transformedNode.accept(writer)
-                ByteBuffer.wrap(writer.toByteArray())
-            } ?: bb
-
-            definer.invoke(name, newBb, ProtectionDomain(null, null))
-        },
-        parent = parent,
-    ) {
-        override fun tryDefine(name: String): Class<*>? {
-            return extraClassProvider.getByteArray(name)?.let {
-                sourceDefiner.define(name, ByteBuffer.wrap(it), this, ::defineClass)
-            } ?: super.tryDefine(name)
-        }
-
-        companion object {
-            init {
-                registerAsParallelCapable()
-            }
-        }
     }
 
     public fun startMinecraft(args: Array<String>) {
@@ -129,50 +84,4 @@ public class MinecraftHandler<T : MinecraftReference>(
             priority to transformer
         )
     }
-
-//    public fun writeAll() {
-//        val mixins: Set<Map.Entry<String, MutableList<MixinMetadata<*>>>> =
-//            mixins.filter { updatedMixins.contains(it.key) }.entries
-//
-//        val toWrite = mixins.map { (to, all: MutableList<MixinMetadata<*>>) ->
-//            all.map { (data, injection) ->
-//                (injection as MixinInjection<MixinInjection.InjectionData>).apply(data)
-//            }.reduce { acc: TransformerConfig, t: TransformerConfig.Mutable ->
-//                acc + t
-//            } to to
-//        }
-//
-//        toWrite.forEach { (config, to) ->
-//            val entry = minecraftReference
-//                .archive
-//                .reader["${to.replace('.', '/')}.class"]
-//            val bytes = entry
-//                ?.resource
-//                ?.open()
-//                ?.readInputStream()
-//                ?: throw IllegalArgumentException("Failed to inject into class '$to' because it does not exist!")
-//
-//            if (!isLoaded) {
-//                minecraftReference.archive.writer.put(
-//                    entry.transform(
-//                        config, minecraftReference.libraries
-//                    )
-//                )
-//            } else {
-//                instrumentation.redefineClasses(
-//                    ClassDefinition(
-//                        handle.archive.classloader.loadClass(to),
-//                        Archives.resolve(
-//                            ClassReader(bytes),
-//                            config,
-//                            AwareClassWriter(
-//                                minecraftReference.libraries + minecraftReference.archive,
-//                                Archives.WRITER_FLAGS
-//                            )
-//                        )
-//                    )
-//                )
-//            }
-//        }
-//    }
 }

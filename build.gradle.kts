@@ -171,7 +171,6 @@ allprojects {
     version = "1.0-SNAPSHOT"
 
     repositories {
-        mavenLocal()
         mavenCentral()
         maven {
             isAllowInsecureProtocol = true

@@ -1,7 +1,3 @@
-import groovy.namespace.QName
-import groovy.util.Node
-import groovy.util.NodeList
-
 group = "net.yakclient.minecraft"
 version = "1.0-SNAPSHOT"
 repositories {
@@ -11,6 +7,7 @@ repositories {
         url = uri("http://maven.yakclient.net/snapshots")
     }
 }
+
 dependencies {
     implementation("net.yakclient:launchermeta-handler:1.1-SNAPSHOT")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
@@ -84,34 +81,6 @@ publishing {
                     val yakclientRepositoryNode = repositoriesNode.appendNode("repository")
                     yakclientRepositoryNode.appendNode("id", "yakclient")
                     yakclientRepositoryNode.appendNode("url", "http://maven.yakclient.net/snapshots")
-
-//                    val toKeep = setOf(
-//                        "launchermeta-handler",
-//                        "jackson-dataformat-xml",
-//                        "jackson-module-kotlin",
-//                        "archives",
-//                        "archive-mapper",
-//                        "archive-mapper-proguard",
-//                        "common-util",
-//                        "minecraft-bootstrapper"
-//                    )
-//
-//                    val nodeList = asNode()["dependencies"] as NodeList
-//                    (nodeList.getAt("dependency"))
-//                        .map { it as Node }
-//                        .forEach {
-//                            (it.value() as NodeList)
-//                                .map { n -> n as Node }
-//                                .filter { n ->
-//                                    ((n.name() as QName).localPart).contains("artifactId")
-//                                }
-//                                .forEach { n ->
-//                                    if (!toKeep.contains(n.value() as String)) {
-//                                        val parent = n.parent()
-//                                        println(parent.parent().remove(parent))
-//                                    }
-//                                }
-//                        }
                 }
 
                 licenses {
