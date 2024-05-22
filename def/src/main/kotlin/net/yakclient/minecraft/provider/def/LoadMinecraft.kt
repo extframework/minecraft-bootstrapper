@@ -108,7 +108,10 @@ public class MinecraftDependencyResolver(
                                         null,
                                         listOf()
                                     )
-                                } else throw MetadataRequestException.MetadataNotFound
+                                } else throw MetadataRequestException.MetadataNotFound(
+                                    desc,
+                                    "minecraft libraries"
+                                )
                             }
                     },
                     settings
