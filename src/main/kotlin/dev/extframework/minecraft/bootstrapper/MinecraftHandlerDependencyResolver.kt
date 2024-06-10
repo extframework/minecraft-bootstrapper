@@ -1,4 +1,4 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.ArtifactMetadata
 import com.durganmcbroom.artifact.resolver.ArtifactRequest
@@ -8,10 +8,10 @@ import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySet
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
-import net.yakclient.boot.archive.ArchiveException
-import net.yakclient.boot.archive.ArchiveGraph
-import net.yakclient.boot.archive.ArchiveTrace
-import net.yakclient.boot.maven.MavenLikeResolver
+import dev.extframework.boot.archive.ArchiveException
+import dev.extframework.boot.archive.ArchiveGraph
+import dev.extframework.boot.archive.ArchiveTrace
+import dev.extframework.boot.maven.MavenLikeResolver
 import java.util.*
 
 private const val PROPERTY_FILE_LOCATION = "META-INF/minecraft-provider.properties"

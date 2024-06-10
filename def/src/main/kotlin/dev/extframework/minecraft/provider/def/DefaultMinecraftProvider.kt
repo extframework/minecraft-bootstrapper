@@ -1,19 +1,19 @@
-package net.yakclient.minecraft.provider.def
+package dev.extframework.minecraft.provider.def
 
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
-import net.yakclient.archive.mapper.ArchiveMapping
-import net.yakclient.archive.mapper.ClassIdentifier
-import net.yakclient.archive.mapper.MethodIdentifier
-import net.yakclient.archive.mapper.parsers.proguard.ProGuardMappingParser
-import net.yakclient.archives.ArchiveHandle
-import net.yakclient.boot.archive.ArchiveGraph
-import net.yakclient.boot.loader.MutableClassLoader
-import net.yakclient.boot.store.DelegatingDataStore
-import net.yakclient.launchermeta.handler.LaunchMetadata
-import net.yakclient.minecraft.bootstrapper.MinecraftHandle
-import net.yakclient.minecraft.bootstrapper.MinecraftProvider
+import dev.extframework.archive.mapper.ArchiveMapping
+import dev.extframework.archive.mapper.ClassIdentifier
+import dev.extframework.archive.mapper.MethodIdentifier
+import dev.extframework.archive.mapper.parsers.proguard.ProGuardMappingParser
+import dev.extframework.archives.ArchiveHandle
+import dev.extframework.boot.archive.ArchiveGraph
+import dev.extframework.boot.loader.MutableClassLoader
+import dev.extframework.boot.store.DelegatingDataStore
+import dev.extframework.launchermeta.handler.LaunchMetadata
+import dev.extframework.minecraft.bootstrapper.MinecraftHandle
+import dev.extframework.minecraft.bootstrapper.MinecraftProvider
 import java.nio.file.Path
 import kotlin.io.path.inputStream
 

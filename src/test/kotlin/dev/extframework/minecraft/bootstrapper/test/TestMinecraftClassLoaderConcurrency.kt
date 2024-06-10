@@ -1,8 +1,8 @@
-package net.yakclient.minecraft.bootstrapper.test
+package dev.extframework.minecraft.bootstrapper.test
 
-import net.yakclient.boot.loader.*
-import net.yakclient.minecraft.bootstrapper.ExtraClassProvider
-import net.yakclient.minecraft.bootstrapper.MinecraftClassLoader
+import dev.extframework.boot.loader.*
+import dev.extframework.minecraft.bootstrapper.ExtraClassProvider
+import dev.extframework.minecraft.bootstrapper.MinecraftClassLoader
 import org.junit.jupiter.api.RepeatedTest
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes

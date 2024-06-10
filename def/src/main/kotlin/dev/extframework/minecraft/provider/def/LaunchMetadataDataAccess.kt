@@ -1,13 +1,13 @@
-package net.yakclient.minecraft.provider.def
+package dev.extframework.minecraft.provider.def
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
-import net.yakclient.boot.store.DataAccess
-import net.yakclient.common.util.make
+import dev.extframework.boot.store.DataAccess
+import dev.extframework.common.util.make
 import java.nio.file.Path
-import net.yakclient.common.util.resolve
-import net.yakclient.launchermeta.handler.LaunchMetadata
+import dev.extframework.common.util.resolve
+import dev.extframework.launchermeta.handler.LaunchMetadata
 import java.nio.file.Files
 
 public class LaunchMetadataDataAccess(

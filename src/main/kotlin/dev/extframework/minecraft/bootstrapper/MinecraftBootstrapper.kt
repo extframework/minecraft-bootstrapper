@@ -1,4 +1,4 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
@@ -9,12 +9,12 @@ import com.durganmcbroom.jobs.job
 import com.durganmcbroom.resources.ResourceAlgorithm.SHA1
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import net.yakclient.boot.BootInstance
-import net.yakclient.boot.component.ComponentInstance
-import net.yakclient.boot.maven.MavenLikeResolver
-import net.yakclient.common.util.immutableLateInit
-import net.yakclient.common.util.make
-import net.yakclient.common.util.resolve
+import dev.extframework.boot.BootInstance
+import dev.extframework.boot.component.ComponentInstance
+import dev.extframework.boot.maven.MavenLikeResolver
+import dev.extframework.common.util.immutableLateInit
+import dev.extframework.common.util.make
+import dev.extframework.common.util.resolve
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL

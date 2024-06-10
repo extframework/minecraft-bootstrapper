@@ -1,8 +1,8 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.jobs.Job
-import net.yakclient.boot.archive.ArchiveGraph
-import net.yakclient.boot.loader.MutableClassLoader
+import dev.extframework.boot.archive.ArchiveGraph
+import dev.extframework.boot.loader.MutableClassLoader
 import java.nio.file.Path
 
 public interface MinecraftProvider<T: MinecraftReference> {

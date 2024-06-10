@@ -1,7 +1,7 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
-import net.yakclient.boot.component.ComponentConfiguration
+import dev.extframework.boot.component.ComponentConfiguration
 
 public data class MinecraftBootstrapperConfiguration(
         val mcVersion: String,

@@ -1,14 +1,14 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
-import net.yakclient.archives.ArchiveTree
-import net.yakclient.archives.Archives
-import net.yakclient.archives.transform.AwareClassWriter
-import net.yakclient.boot.loader.MutableClassLoader
-import net.yakclient.boot.loader.MutableClassProvider
-import net.yakclient.boot.loader.MutableResourceProvider
-import net.yakclient.boot.loader.MutableSourceProvider
-import net.yakclient.boot.loader.SourceDefiner
-import net.yakclient.common.util.toBytes
+import dev.extframework.archives.ArchiveTree
+import dev.extframework.archives.Archives
+import dev.extframework.archives.transform.AwareClassWriter
+import dev.extframework.boot.loader.MutableClassLoader
+import dev.extframework.boot.loader.MutableClassProvider
+import dev.extframework.boot.loader.MutableResourceProvider
+import dev.extframework.boot.loader.MutableSourceProvider
+import dev.extframework.boot.loader.SourceDefiner
+import dev.extframework.common.util.toBytes
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.tree.ClassNode
 import java.nio.ByteBuffer

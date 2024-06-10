@@ -1,17 +1,10 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.jobs.*
-import net.yakclient.archives.ArchiveTree
-import net.yakclient.archives.Archives
-import net.yakclient.archives.transform.AwareClassWriter
-import org.objectweb.asm.ClassReader
+import dev.extframework.archives.ArchiveTree
 import java.nio.file.Path
-import net.yakclient.boot.archive.ArchiveGraph
-import net.yakclient.boot.loader.*
-import net.yakclient.common.util.toBytes
+import dev.extframework.boot.archive.ArchiveGraph
 import org.objectweb.asm.tree.ClassNode
-import java.nio.ByteBuffer
-import java.security.ProtectionDomain
 import java.util.PriorityQueue
 
 public interface MinecraftClassTransformer {

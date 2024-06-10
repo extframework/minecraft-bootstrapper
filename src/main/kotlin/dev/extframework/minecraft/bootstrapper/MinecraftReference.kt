@@ -1,9 +1,6 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
-import net.yakclient.archive.mapper.ArchiveMapping
-import net.yakclient.archives.ArchiveHandle
-import net.yakclient.archives.ArchiveReference
-import net.yakclient.archives.ArchiveTree
+import dev.extframework.archives.ArchiveReference
 import java.nio.file.Path
 
 public interface MinecraftReference {

@@ -1,6 +1,6 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
-import net.yakclient.archives.ArchiveHandle
+import dev.extframework.archives.ArchiveHandle
 
 public interface MinecraftHandle  {
     public val archive: ArchiveHandle

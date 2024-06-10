@@ -1,13 +1,13 @@
-package net.yakclient.minecraft.bootstrapper.test
+package dev.extframework.minecraft.bootstrapper.test
 
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.durganmcbroom.resources.ResourceAlgorithm
-import net.yakclient.boot.test.testBootInstance
-import net.yakclient.common.util.readInputStream
-import net.yakclient.minecraft.bootstrapper.ExtraClassProvider
-import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperConfiguration
-import net.yakclient.minecraft.bootstrapper.MinecraftBootstrapperFactory
+import dev.extframework.boot.test.testBootInstance
+import dev.extframework.common.util.readInputStream
+import dev.extframework.minecraft.bootstrapper.ExtraClassProvider
+import dev.extframework.minecraft.bootstrapper.MinecraftBootstrapperConfiguration
+import dev.extframework.minecraft.bootstrapper.MinecraftBootstrapperFactory
 import runBootBlocking
 import java.lang.IllegalStateException
 import java.nio.file.Path

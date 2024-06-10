@@ -1,11 +1,11 @@
-package net.yakclient.minecraft.bootstrapper
+package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.durganmcbroom.resources.ResourceAlgorithm
-import net.yakclient.boot.BootInstance
-import net.yakclient.boot.component.ComponentFactory
-import net.yakclient.boot.component.context.ContextNodeTypes.String
-import net.yakclient.boot.component.context.ContextNodeValue
+import dev.extframework.boot.BootInstance
+import dev.extframework.boot.component.ComponentFactory
+import dev.extframework.boot.component.context.ContextNodeTypes.String
+import dev.extframework.boot.component.context.ContextNodeValue
 
 public class MinecraftBootstrapperFactory(boot: BootInstance) : ComponentFactory<MinecraftBootstrapperConfiguration, MinecraftBootstrapper>(boot) {
     override fun parseConfiguration(value: ContextNodeValue): MinecraftBootstrapperConfiguration {
