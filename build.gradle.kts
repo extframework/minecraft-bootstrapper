@@ -4,7 +4,7 @@ import dev.extframework.gradle.common.dm.jobs
 
 plugins {
     kotlin("jvm") version "1.9.21"
-    id("dev.extframework.common") version "1.0.4"
+    id("dev.extframework.common") version "1.0.5"
 }
 
 group = "dev.extframework.components"
