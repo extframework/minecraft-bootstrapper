@@ -41,28 +41,9 @@ public class MinecraftBootstrapper(
     override fun start() : Job<Unit> = job {
         val cachePath = boot.location resolve configuration.cache
 
-        val providerVersionsPath = cachePath resolve "minecraft-versions.json"
+        val provider = MinecraftProviderFinder(cachePath)
 
-        val versionMappings = providerVersionsPath.toFile().takeIf(File::exists)
-            ?.let { ObjectMapper().readValue<Map<String, String>>(it) } ?: HashMap()
-
-        fun getProviderFor(mcVersion: String): SimpleMavenDescriptor {
-            val descString = versionMappings[mcVersion] ?: run {
-                providerVersionsPath.make()
-
-                Channels.newChannel(URL(configuration.versionMappings).openStream()).use { cin ->
-                    FileOutputStream(providerVersionsPath.toFile()).use { fout: FileOutputStream ->
-                        fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
-                    }
-                }
-
-                ObjectMapper().readValue<Map<String, String>>(providerVersionsPath.toFile())
-            }[mcVersion] ?: throw IllegalArgumentException("Unknown minecraft version: '$mcVersion'")
-            return SimpleMavenDescriptor.parseDescription(descString)
-                ?: throw IllegalArgumentException("Failed to parse maven descriptor minecraft provider : '$descString'.")
-        }
-
-        val descriptor = getProviderFor(configuration.mcVersion)
+        val descriptor = provider.find(configuration.mcVersion)
 
         job(JobName("Load minecraft handler")) {
             minecraftHandler = MinecraftHandler(

@@ -4,10 +4,11 @@ import dev.extframework.gradle.common.dm.jobs
 
 plugins {
     kotlin("jvm") version "1.9.21"
-    id("dev.extframework.common") version "1.0.5"
+    id("dev.extframework.common") version "1.0.6"
 }
 
 group = "dev.extframework.components"
+version = "1.0-SNAPSHOT"
 
 dependencies {
     boot()
@@ -98,7 +99,6 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "dev.extframework.common")
 
-    version = "1.0-SNAPSHOT"
 
     repositories {
         mavenCentral()

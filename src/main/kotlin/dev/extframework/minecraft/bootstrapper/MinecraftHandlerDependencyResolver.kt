@@ -8,11 +8,22 @@ import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySet
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.readValue
 import dev.extframework.boot.archive.ArchiveException
 import dev.extframework.boot.archive.ArchiveGraph
 import dev.extframework.boot.archive.ArchiveTrace
 import dev.extframework.boot.maven.MavenLikeResolver
+import dev.extframework.common.util.make
+import dev.extframework.common.util.resolve
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
+import java.nio.channels.Channels
+import java.nio.file.Path
 import java.util.*
+import kotlin.collections.HashMap
 
 private const val PROPERTY_FILE_LOCATION = "META-INF/minecraft-provider.properties"
 
@@ -23,6 +34,38 @@ private const val MINECRAFT_PROVIDER_CN = "provider-name"
 //) : MavenDependencyResolver(
 //    parentClassLoader = MinecraftBootstrapper::class.java.classLoader,
 //)
+
+internal class MinecraftProviderFinder(
+    cachePath: Path
+) {
+    private val info: ProviderVersionInfo
+
+    private data class ProviderVersionInfo(
+        val default: String,
+        val overrides: Map<String, String> = HashMap()
+    )
+
+    init {
+        val path = cachePath resolve "mc-provider-version-info.json"
+
+        if (path.make()) Channels.newChannel(URL("https://static.extframework.dev/mc-provider-version-info.json").openStream())
+            .use { cin ->
+                FileOutputStream(path.toFile()).use { fout: FileOutputStream ->
+                    fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
+                }
+            }
+
+        val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
+        info = mapper.readValue<ProviderVersionInfo>(path.toFile())
+    }
+
+    fun find(
+        version: String
+    ) = SimpleMavenDescriptor.parseDescription(info.overrides[version] ?: info.default)
+        ?: throw Exception("Invalid Minecraft Provider Version data specified by: 'https://static.extframework.dev/mc-provider-version-info.json' (or modified by the local user?) Maven descriptors failed to parse.")
+
+}
+
 
 public fun ArchiveGraph.loadProvider(
     descriptor: SimpleMavenDescriptor,
@@ -35,12 +78,10 @@ public fun ArchiveGraph.loadProvider(
         resolver
     )().merge()
     val archive = get(descriptor, resolver)().merge().archive
-        ?: throw
-            ArchiveException(
-                ArchiveTrace(descriptor, null),
-                "Minecraft provider has no archive! ('${descriptor}')",
-            )
-
+        ?: throw ArchiveException(
+            ArchiveTrace(descriptor, null),
+            "Minecraft provider has no archive! ('${descriptor}')",
+        )
 
     val properties =
         checkNotNull(archive.classloader.getResourceAsStream(PROPERTY_FILE_LOCATION)) { "Failed to find Minecraft Provider properties file in given archive." }.use {

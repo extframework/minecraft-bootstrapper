@@ -4,6 +4,8 @@ import dev.extframework.gradle.common.dm.jobs
 
 group = "dev.extframework.minecraft"
 
+version = "1.0-SNAPSHOT"
+
 dependencies {
     boot()
     archives()

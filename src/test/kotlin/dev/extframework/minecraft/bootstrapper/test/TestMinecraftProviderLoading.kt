@@ -8,8 +8,10 @@ import dev.extframework.common.util.readInputStream
 import dev.extframework.minecraft.bootstrapper.ExtraClassProvider
 import dev.extframework.minecraft.bootstrapper.MinecraftBootstrapperConfiguration
 import dev.extframework.minecraft.bootstrapper.MinecraftBootstrapperFactory
+import dev.extframework.minecraft.bootstrapper.MinecraftProviderFinder
 import runBootBlocking
 import java.lang.IllegalStateException
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import kotlin.test.Test
@@ -30,7 +32,7 @@ class TestMinecraftProviderLoading {
         val instance = MinecraftBootstrapperFactory(bootInstance).new(
             MinecraftBootstrapperConfiguration(
                 version,
-                SimpleMavenRepositorySettings.local(preferredHash = ResourceAlgorithm.SHA1),
+                SimpleMavenRepositorySettings.default(url = "https://maven.extframework.dev/snapshots"),
                 "mc",
                 this::class.java.getResource("/mc-version-test-mappings.json")!!.toString(),
             )
@@ -67,5 +69,12 @@ class TestMinecraftProviderLoading {
     @Test
     fun `Test 1_20_1 load`() {
         loadMinecraft("1.20.1")
+    }
+
+    @Test
+    fun `Find correct mc version`() {
+        val find = MinecraftProviderFinder(Files.createTempDirectory("test")).find("1.21")
+        println(find)
+        check(find.name == "dev.extframework.minecraft:minecraft-provider-def:1.0-SNAPSHOT")
     }
 }
