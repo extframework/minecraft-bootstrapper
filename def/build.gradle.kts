@@ -7,7 +7,7 @@ group = "dev.extframework.minecraft"
 version = "1.0-SNAPSHOT"
 
 dependencies {
-    boot()
+    boot(version = "3.0-SNAPSHOT")
     archives()
     commonUtil()
     archiveMapper(proguard = true)
@@ -18,9 +18,9 @@ dependencies {
 
     implementation(project(":"))
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.4")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.17.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
 }
 
 common {

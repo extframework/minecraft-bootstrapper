@@ -17,23 +17,15 @@ import dev.extframework.boot.archive.ArchiveTrace
 import dev.extframework.boot.maven.MavenLikeResolver
 import dev.extframework.common.util.make
 import dev.extframework.common.util.resolve
-import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 import java.nio.channels.Channels
 import java.nio.file.Path
 import java.util.*
-import kotlin.collections.HashMap
 
 private const val PROPERTY_FILE_LOCATION = "META-INF/minecraft-provider.properties"
 
 private const val MINECRAFT_PROVIDER_CN = "provider-name"
-
-//public class MinecraftHandlerDependencyResolver(
-//    internal val repository: SimpleMavenRepositorySettings,
-//) : MavenDependencyResolver(
-//    parentClassLoader = MinecraftBootstrapper::class.java.classLoader,
-//)
 
 internal class MinecraftProviderFinder(
     cachePath: Path
@@ -71,7 +63,7 @@ public fun ArchiveGraph.loadProvider(
     descriptor: SimpleMavenDescriptor,
     resolver: MavenLikeResolver<*, *>,
     repository: SimpleMavenRepositorySettings,
-): Job<MinecraftProvider<*>> = job(JobName("Load minecraft provider: '${descriptor.name}'")) {
+): Job<MinecraftProvider> = job(JobName("Load minecraft provider: '${descriptor.name}'")) {
     cache(
         SimpleMavenArtifactRequest(descriptor, includeScopes = setOf("compile", "runtime", "import")),
         repository,
@@ -93,7 +85,7 @@ public fun ArchiveGraph.loadProvider(
 
     val clazz = archive.classloader.loadClass(providerClassName)
 
-    clazz.getConstructor().newInstance() as? MinecraftProvider<*>
+    clazz.getConstructor().newInstance() as? MinecraftProvider
         ?: throw IllegalStateException("Loaded provider class, but type is not a MinecraftProvider!")
 }
 

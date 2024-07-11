@@ -1,18 +1,18 @@
 package dev.extframework.minecraft.provider.def
 
-import com.durganmcbroom.artifact.resolver.*
-import com.durganmcbroom.artifact.resolver.simple.maven.*
-import com.durganmcbroom.artifact.resolver.simple.maven.pom.PomRepository
+import com.durganmcbroom.artifact.resolver.ResolutionContext
+import com.durganmcbroom.artifact.resolver.createContext
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactMetadata
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
 import com.durganmcbroom.jobs.logging.info
-import com.durganmcbroom.jobs.result
 import com.durganmcbroom.resources.ResourceAlgorithm
 import com.durganmcbroom.resources.VerifiedResource
 import com.durganmcbroom.resources.toResource
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
 import dev.extframework.archives.ArchiveHandle
 import dev.extframework.archives.ArchiveReference
 import dev.extframework.archives.Archives
@@ -27,7 +27,9 @@ import dev.extframework.common.util.copyTo
 import dev.extframework.common.util.make
 import dev.extframework.common.util.resolve
 import dev.extframework.launchermeta.handler.*
-import dev.extframework.minecraft.bootstrapper.MinecraftReference
+import dev.extframework.minecraft.bootstrapper.MinecraftHandle
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.net.URL
 import java.nio.file.Path
@@ -37,21 +39,14 @@ import kotlin.math.floor
 public const val MINECRAFT_RESOURCES_URL: String = "https://resources.download.minecraft.net"
 
 public data class DefaultMinecraftReference(
-    override val version: String,
-    override val archive: ArchiveReference,
-    override val libraries: List<ArchiveReference>,
+    val version: String,
+    val archive: ArchiveReference,
+    val libraries: List<ArchiveReference>,
     val manifest: LaunchMetadata,
-    override val mappings: Path,
-    override val runtimeInfo: MinecraftReference.GameRuntimeInfo,
+    val mappings: Path,
+    val runtimeInfo: MinecraftHandle.GameRuntimeInfo,
     internal val libraryDescriptors: Map<SimpleMavenDescriptor, ArchiveReference>
-) : MinecraftReference
-
-private val mcRepo =
-    SimpleMavenRepositorySettings.default(
-        url = "https://libraries.minecraft.net",
-        preferredHash = ResourceAlgorithm.SHA1
-    )
-
+)
 
 private fun ArchiveNode<*>.handleOrParents(): List<ArchiveHandle> {
     return archive?.let(::listOf) ?: parents.flatMap { it.handleOrParents() }
@@ -63,71 +58,10 @@ public class MinecraftDependencyResolver(
 ) : MavenDependencyResolver(
     parentClassLoader = classloader.parent,
 ) {
-    private fun SimpleMavenDescriptor.isMinecraft(): Boolean {
-        return group == "net.minecraft" && artifact == "minecraft"
-    }
-
     override val metadataType: Class<SimpleMavenArtifactMetadata> = SimpleMavenArtifactMetadata::class.java
     override val name: String = "minecraft"
 
-    private val factory: RepositoryFactory<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, ArtifactStub<SimpleMavenArtifactRequest, SimpleMavenRepositoryStub>, ArtifactReference<SimpleMavenArtifactMetadata, ArtifactStub<SimpleMavenArtifactRequest, SimpleMavenRepositoryStub>>, SimpleMavenArtifactRepository> =
-        object :
-            RepositoryFactory<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, SimpleMavenArtifactStub, SimpleMavenArtifactReference, SimpleMavenArtifactRepository> {
-            override fun createNew(settings: SimpleMavenRepositorySettings): SimpleMavenArtifactRepository {
-                val f = this
-                return object : SimpleMavenArtifactRepository(
-                    f,
-                    object : SimpleMavenMetadataHandler(settings) {
-                        override fun requestMetadata(desc: SimpleMavenDescriptor): Job<SimpleMavenArtifactMetadata> =
-                            job {
-                                if (desc.isMinecraft()) {
-                                    SimpleMavenArtifactMetadata(
-                                        desc,
-                                        null,
-                                        reference.libraryDescriptors.map {
-                                            SimpleMavenChildInfo(
-                                                it.key,
-                                                listOf(
-                                                    SimpleMavenRepositoryStub(
-                                                        PomRepository(
-                                                            null,
-                                                            "minecraft",
-                                                            ""
-                                                        ),
-                                                        false
-                                                    )
-                                                ),
-                                                "mclib"
-                                            )
-                                        }
-                                    )
-                                } else if (reference.libraryDescriptors.contains(desc)) {
-                                    SimpleMavenArtifactMetadata(
-                                        desc,
-                                        null,
-                                        listOf()
-                                    )
-                                } else throw MetadataRequestException.MetadataNotFound(
-                                    desc,
-                                    "minecraft libraries"
-                                )
-                            }
-                    },
-                    settings
-                ) {
-                    override val stubResolver: SimpleMavenArtifactStubResolver = SimpleMavenArtifactStubResolver(
-                        { stub ->
-                            result {
-                                if (stub.unresolvedRepository.name == "minecraft") {
-                                    mcRepo
-                                } else throw RepositoryStubResolutionException("Repository not minecraft repository")
-                            }
-                        },
-                        f
-                    )
-                }
-            }
-        }
+    private val factory = MinecraftRepositoryFactory(reference)
 
     override fun createContext(settings: SimpleMavenRepositorySettings): ResolutionContext<SimpleMavenArtifactRequest, *, SimpleMavenArtifactMetadata, *> {
         return factory.createContext(settings)
@@ -148,7 +82,6 @@ public class MinecraftDependencyResolver(
             val acessTree = helper.newAccessTree {
                 allDirect(parents)
             }
-
 
             val handle = Archives.resolve(
                 reference.archive,
@@ -192,7 +125,6 @@ public class MinecraftDependencyResolver(
         }
     }
 }
-
 
 internal fun loadMinecraft(
     reference: DefaultMinecraftReference,
@@ -279,7 +211,6 @@ internal fun loadMinecraftRef(
                     .entries
                     .map { entry ->
                         val (name, asset) = entry
-//                        async {
                         val assetPath = assetsObjectsPath resolve asset.checksum.take(2) resolve asset.checksum
                         if (assetPath.make()) {
                             // TODO redo this to make use of the file size of all assets (is metadata that launchermeta-handler should deal with)
@@ -304,8 +235,6 @@ internal fun loadMinecraftRef(
                                 HexFormat.of().parseHex(asset.checksum),
                             ) copyTo assetPath
                         }
-//
-//                        }
                     }
 
                 assetIndexCacheResource copyTo assetIndexCachePath
@@ -332,7 +261,6 @@ internal fun loadMinecraftRef(
 
                         if (toPath.make()) {
                             lib.downloads.artifact.toResource().merge() copyTo toPath
-//                        status(1f / libraries.size) { "Downloaded: '${desc.name}'" }
                         }
 
                         Archives.Finders.ZIP_FINDER.find(toPath)
@@ -354,7 +282,7 @@ internal fun loadMinecraftRef(
             awaitedDependencyMap.values.toList(),
             metadata,
             mappingsPath,
-            MinecraftReference.GameRuntimeInfo(
+            MinecraftHandle.GameRuntimeInfo(
                 assetsPath,
                 metadata.assetIndex.id,
                 versionPath

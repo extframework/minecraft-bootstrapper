@@ -6,8 +6,6 @@ import com.durganmcbroom.resources.ResourceAlgorithm
 import dev.extframework.boot.test.testBootInstance
 import dev.extframework.common.util.readInputStream
 import dev.extframework.minecraft.bootstrapper.ExtraClassProvider
-import dev.extframework.minecraft.bootstrapper.MinecraftBootstrapperConfiguration
-import dev.extframework.minecraft.bootstrapper.MinecraftBootstrapperFactory
 import dev.extframework.minecraft.bootstrapper.MinecraftProviderFinder
 import runBootBlocking
 import java.lang.IllegalStateException

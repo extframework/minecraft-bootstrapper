@@ -1,11 +1,16 @@
 package dev.extframework.minecraft.bootstrapper
 
 import dev.extframework.archives.ArchiveHandle
+import java.nio.file.Path
 
 public interface MinecraftHandle  {
     public val archive: ArchiveHandle
     public val libraries: List<ArchiveHandle>
-    public fun start(args: Array<String>)
+    public val info: GameRuntimeInfo
 
-    public fun shutdown()
+    public data class GameRuntimeInfo(
+        public val assetsPath: Path,
+        public val assetsName: String,
+        public val gameDir: Path,
+    )
 }
