@@ -4,12 +4,11 @@ import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySet
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
-import com.durganmcbroom.resources.ResourceAlgorithm.SHA1
 import dev.extframework.boot.archive.ArchiveGraph
 import dev.extframework.boot.maven.MavenLikeResolver
 import java.nio.file.Path
 
-public fun load(
+public fun loadMinecraft(
     version: String,
 
     repository: SimpleMavenRepositorySettings,

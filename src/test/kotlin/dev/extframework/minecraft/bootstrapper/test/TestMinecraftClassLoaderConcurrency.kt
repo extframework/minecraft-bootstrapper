@@ -1,7 +1,6 @@
 package dev.extframework.minecraft.bootstrapper.test
 
 import dev.extframework.boot.loader.*
-import dev.extframework.minecraft.bootstrapper.ExtraClassProvider
 import dev.extframework.minecraft.bootstrapper.MinecraftClassLoader
 import org.junit.jupiter.api.RepeatedTest
 import org.objectweb.asm.ClassWriter
@@ -73,16 +72,8 @@ class TestMinecraftClassLoaderConcurrency {
     fun `Test minecraft loader`() {
         concurrentlyLoadClasses { p ->
             MinecraftClassLoader(
-                {
-                    null
-                },
-                listOf(),
                 ClassLoader.getPlatformClassLoader(),
-                object : ExtraClassProvider {
-                    override fun getByteArray(name: String): ByteArray? {
-                        return null
-                    }
-                }
+                false
             ).also {
                 it.addSources(p)
             }

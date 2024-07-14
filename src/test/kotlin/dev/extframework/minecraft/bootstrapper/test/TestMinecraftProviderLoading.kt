@@ -1,13 +1,13 @@
 package dev.extframework.minecraft.bootstrapper.test
 
+import BootLoggerFactory
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
-import com.durganmcbroom.resources.ResourceAlgorithm
-import dev.extframework.boot.test.testBootInstance
+import com.durganmcbroom.jobs.launch
+import dev.extframework.boot.archive.ArchiveGraph
+import dev.extframework.boot.maven.MavenResolverProvider
 import dev.extframework.common.util.readInputStream
-import dev.extframework.minecraft.bootstrapper.ExtraClassProvider
 import dev.extframework.minecraft.bootstrapper.MinecraftProviderFinder
-import runBootBlocking
 import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -17,45 +17,21 @@ import kotlin.test.Test
 
 class TestMinecraftProviderLoading {
     fun loadMinecraft(version: String) {
-        val dependencies = this::class.java.getResource("/dependencies.txt")?.openStream()?.use {
-            val fileStr = String(it.readInputStream())
-            fileStr.split("\n").toSet()
-        }?.filterNot { it.isBlank() } ?: throw IllegalStateException("Cant load dependencies?")
-        val bootInstance = testBootInstance(
-            mapOf(), location = Path.of("test-run").toAbsolutePath(),
-            (dependencies).mapTo(HashSet()) { SimpleMavenDescriptor.parseDescription(it)!! }
-        )
-        println(bootInstance.location.toAbsolutePath())
+        val cache = Path.of("test-run").toAbsolutePath()
 
-        val instance = MinecraftBootstrapperFactory(bootInstance).new(
-            MinecraftBootstrapperConfiguration(
+        val archiveGraph = ArchiveGraph(cache)
+        val maven = MavenResolverProvider()
+
+        launch(BootLoggerFactory()) {
+            dev.extframework.minecraft.bootstrapper.loadMinecraft(
                 version,
-                SimpleMavenRepositorySettings.default(url = "https://maven.extframework.dev/snapshots"),
-                "mc",
-                this::class.java.getResource("/mc-version-test-mappings.json")!!.toString(),
-            )
-        )
-        runBootBlocking {
-            instance.start()().merge()
-            instance.minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader(), object : ExtraClassProvider {
-                override fun getByteArray(name: String): ByteArray? {
-                    return null
-                }
-            })().merge()
+                SimpleMavenRepositorySettings.local(),
+                cache,
+                archiveGraph,
+                maven.resolver,
+                false
+            )().merge()
         }
-
-        instance.minecraftHandler.startMinecraft(
-            arrayOf(
-                "--version", "1.20.1",
-                "--assetsDir",
-                instance.minecraftHandler.minecraftReference.runtimeInfo.assetsPath.toString() + "/",
-                "--assetIndex",
-                instance.minecraftHandler.minecraftReference.runtimeInfo.assetsName,
-                "--gameDir",
-                instance.minecraftHandler.minecraftReference.runtimeInfo.gameDir.toString(),
-                "--accessToken", "",
-            )
-        )
         println("back here")
     }
 
@@ -68,6 +44,11 @@ class TestMinecraftProviderLoading {
     fun `Test 1_20_1 load`() {
         loadMinecraft("1.20.1")
     }
+    @Test
+    fun `Test 1_21 load`() {
+        loadMinecraft("1.21")
+    }
+
 
     @Test
     fun `Find correct mc version`() {

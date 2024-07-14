@@ -1,17 +1,19 @@
 import dev.extframework.gradle.common.*
 import dev.extframework.gradle.common.dm.artifactResolver
 import dev.extframework.gradle.common.dm.jobs
+import dev.extframework.gradle.common.dm.resourceApi
 
 group = "dev.extframework.minecraft"
 
-version = "1.0-SNAPSHOT"
+version = "1.1-SNAPSHOT"
 
 dependencies {
     boot(version = "3.0-SNAPSHOT")
     archives()
     commonUtil()
     archiveMapper(proguard = true)
-    launcherMetaHandler()
+    launcherMetaHandler(version="1.1.3-SNAPSHOT")
+    resourceApi(version = "1.1.4-SNAPSHOT")
 
     artifactResolver()
     jobs(logging = true, progressSimple = true)
@@ -39,5 +41,7 @@ common {
 
 tasks.test {
     useJUnitPlatform()
-    jvmArgs = listOf("--add-reads", "kotlin.stdlib=kotlinx.coroutines.core.jvm")
+
+//    minHeapSize = "512m"
+//    maxHeapSize = "1024m"
 }

@@ -9,6 +9,7 @@ public interface MinecraftHandle  {
     public val info: GameRuntimeInfo
 
     public data class GameRuntimeInfo(
+        public val mainClass: String,
         public val assetsPath: Path,
         public val assetsName: String,
         public val gameDir: Path,
