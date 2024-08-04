@@ -95,9 +95,7 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "dev.extframework.common")
 
-
     repositories {
-        mavenLocal()
         mavenCentral()
         extFramework()
     }
