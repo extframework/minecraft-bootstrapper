@@ -5,15 +5,15 @@ import dev.extframework.gradle.common.dm.resourceApi
 
 group = "dev.extframework.minecraft"
 
-version = "1.1-SNAPSHOT"
+version = "2.0-SNAPSHOT"
 
 dependencies {
-    boot(version = "3.0-SNAPSHOT")
+    boot(version = "3.0.2-SNAPSHOT")
     archives()
     commonUtil()
     archiveMapper(proguard = true)
-    launcherMetaHandler(version="1.1.3-SNAPSHOT")
-    resourceApi(version = "1.1.4-SNAPSHOT")
+    launcherMetaHandler()
+    resourceApi()
 
     artifactResolver()
     jobs(logging = true, progressSimple = true)

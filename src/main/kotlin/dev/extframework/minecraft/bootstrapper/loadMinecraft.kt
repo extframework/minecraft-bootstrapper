@@ -1,13 +1,18 @@
 package dev.extframework.minecraft.bootstrapper
 
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
 import dev.extframework.boot.archive.ArchiveGraph
+import dev.extframework.boot.archive.ClassLoadedArchiveNode
 import dev.extframework.boot.maven.MavenLikeResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Path
 
+@JvmOverloads
 public fun loadMinecraft(
     version: String,
 
@@ -15,13 +20,11 @@ public fun loadMinecraft(
     cache: Path,
 
     archiveGraph: ArchiveGraph,
-    maven: MavenLikeResolver<*, *>,
+    maven: MavenLikeResolver<ClassLoadedArchiveNode<SimpleMavenDescriptor>, *>,
 
-    loadClasses: Boolean = false
-) : Job<MinecraftHandle> = job {
-    val provider = MinecraftProviderFinder(cache)
-
-    val descriptor = provider.find(version)
+    providerFinder: MinecraftProviderFinder = MinecraftProviderRemoteLookup(cache),
+) : Job<MinecraftNode> = job {
+    val descriptor = providerFinder.find(version)
 
     job(JobName("Load minecraft handler")) {
         val minecraftHandler = MinecraftHandler(
@@ -29,9 +32,11 @@ public fun loadMinecraft(
             cache,
             archiveGraph.loadProvider(descriptor, maven, repository)().merge(),
             archiveGraph,
-            loadClasses
         )
 
-        minecraftHandler.loadMinecraft(ClassLoader.getSystemClassLoader())().merge()
+        // This has to be Dispatchers.IO or a class circularity error will get thrown.
+        runBlocking(Dispatchers.IO) {
+            minecraftHandler.loadMinecraft()().merge()
+        }
     }().merge()
 }
