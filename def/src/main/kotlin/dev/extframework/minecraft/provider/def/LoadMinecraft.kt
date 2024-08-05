@@ -28,17 +28,13 @@ internal fun CacheHelper<*>.loadLibs(
     maven: MinecraftLibResolver,
 ) = asyncJob {
     libraries.mapAsync { library ->
-        val artifact = resolveArtifact(
+        cache(
             SimpleMavenArtifactRequest(
                 library.name,
                 isTransitive = false,
             ),
             minecraftRepo,
             maven
-        )().merge()
-
-        cache(
-            artifact, maven
         )().merge()
     }.awaitAll()
 }

@@ -76,15 +76,16 @@ class TestMinecraftProviderLoading {
         }
 
         launch(BootLoggerFactory()) {
-            loadMinecraft(
+            val node = loadMinecraft(
                 version,
                 SimpleMavenRepositorySettings.local(),
                 cache,
                 archiveGraph,
                 maven as MavenLikeResolver<ClassLoadedArchiveNode<SimpleMavenDescriptor>, *>,
             )().merge()
+
+            println("Back here")
         }
-        println("back here")
     }
 
     @Test

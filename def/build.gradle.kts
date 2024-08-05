@@ -5,10 +5,8 @@ import dev.extframework.gradle.common.dm.resourceApi
 
 group = "dev.extframework.minecraft"
 
-version = "2.0-SNAPSHOT"
-
 dependencies {
-    boot(version = "3.0.2-SNAPSHOT")
+    boot()
     archives()
     commonUtil()
     archiveMapper(proguard = true)
