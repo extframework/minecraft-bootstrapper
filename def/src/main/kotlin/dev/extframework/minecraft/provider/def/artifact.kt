@@ -2,15 +2,10 @@ package dev.extframework.minecraft.provider.def
 
 import com.durganmcbroom.artifact.resolver.ArtifactMetadata
 import com.durganmcbroom.artifact.resolver.ArtifactRepository
-import com.durganmcbroom.artifact.resolver.ArtifactRequest
 import com.durganmcbroom.artifact.resolver.RepositoryFactory
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
-import com.durganmcbroom.artifact.resolver.simple.maven.layout.SimpleMavenDefaultLayout
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.job
 import com.durganmcbroom.resources.Resource
-import com.durganmcbroom.resources.ResourceAlgorithm
 import dev.extframework.launchermeta.handler.*
 import dev.extframework.minecraft.bootstrapper.MinecraftArtifactRequest
 import dev.extframework.minecraft.bootstrapper.MinecraftDescriptor

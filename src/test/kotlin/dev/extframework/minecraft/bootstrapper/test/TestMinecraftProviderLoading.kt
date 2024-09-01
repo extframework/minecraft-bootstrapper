@@ -8,10 +8,8 @@ import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.job
 import com.durganmcbroom.jobs.launch
 import dev.extframework.boot.archive.*
-import dev.extframework.boot.archive.audit.ArchiveAuditors
-import dev.extframework.boot.archive.audit.ArchiveTreeAuditor
-import dev.extframework.boot.archive.audit.AuditContext
-import dev.extframework.boot.archive.audit.chain
+import dev.extframework.boot.audit.Auditors
+import dev.extframework.boot.audit.chain
 import dev.extframework.boot.constraint.ConstraintArchiveAuditor
 import dev.extframework.boot.dependency.BasicDependencyNode
 import dev.extframework.boot.maven.MavenConstraintNegotiator
@@ -58,18 +56,15 @@ class TestMinecraftProviderLoading {
         val maven = object : MavenDependencyResolver(
             parentClassLoader = TestMinecraftProviderLoading::class.java.classLoader,
         ) {
-            override val auditors: ArchiveAuditors
-                get() = super.auditors.with(
-                    archiveTreeAuditor = ConstraintArchiveAuditor(
+            override val auditors: Auditors
+                get() = super.auditors.replace(
+                    ConstraintArchiveAuditor(
                         listOf(MavenConstraintNegotiator()),
                     ).chain(object : ArchiveTreeAuditor {
-                        override fun audit(
-                            event: Tree<Tagged<IArchive<*>, ArchiveNodeResolver<*, *, *, *, *>>>,
-                            context: AuditContext
-                        ): Job<Tree<Tagged<IArchive<*>, ArchiveNodeResolver<*, *, *, *, *>>>> = job {
-                            event.removeIf {
+                        override fun audit(event: ArchiveTreeAuditContext): Job<ArchiveTreeAuditContext> = job {
+                            event.copy(tree = event.tree.removeIf {
                                 alreadyLoaded.contains(negotiator.classify(it.value.descriptor as SimpleMavenDescriptor))
-                            }!!
+                            }!!)
                         }
                     })
                 )

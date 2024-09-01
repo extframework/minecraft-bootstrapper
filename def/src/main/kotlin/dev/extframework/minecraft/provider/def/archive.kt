@@ -31,6 +31,7 @@ import dev.extframework.minecraft.bootstrapper.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitAll
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.Executors
 
@@ -43,6 +44,7 @@ public class DefaultMinecraftResolver internal constructor(
     override val metadataType: Class<MinecraftArtifactMetadata> = MinecraftArtifactMetadata::class.java
     override val name: String = "minecraft"
     override val nodeType: Class<in MinecraftNode> = MinecraftNode::class.java
+
     private val assetsPool = Executors.newWorkStealingPool()
 
     init {
@@ -178,6 +180,16 @@ public class MinecraftLibResolver : MavenLikeResolver<MinecraftLibNode, SimpleMa
         )
     }
 
+    override fun pathForDescriptor(descriptor: SimpleMavenDescriptor, classifier: String, type: String): Path {
+        return Path.of(
+            descriptor.group.replace('.', File.separatorChar),
+            descriptor.artifact,
+            descriptor.version,
+            descriptor.classifier ?: "",
+            "${descriptor.artifact}-${descriptor.version}-$classifier.$type"
+        )
+    }
+
     override fun createContext(
         settings: SimpleMavenRepositorySettings
     ): ResolutionContext<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, SimpleMavenArtifactMetadata> {
@@ -200,9 +212,10 @@ public class MinecraftLibResolver : MavenLikeResolver<MinecraftLibNode, SimpleMa
     }
 }
 
-internal class MinecraftLibResolutionContext : ResolutionContext<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, SimpleMavenArtifactMetadata>(
-    SimpleMaven.createNew(minecraftRepo)
-) {
+internal class MinecraftLibResolutionContext :
+    ResolutionContext<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, SimpleMavenArtifactMetadata>(
+        SimpleMaven.createNew(minecraftRepo)
+    ) {
     override fun getAndResolveAsync(
         request: SimpleMavenArtifactRequest
     ): AsyncJob<Artifact<SimpleMavenArtifactMetadata>> = asyncJob {
@@ -213,7 +226,7 @@ internal class MinecraftLibResolutionContext : ResolutionContext<SimpleMavenRepo
                     request.descriptor.group,
                     request.descriptor.artifact,
                     request.descriptor.version,
-                    null,
+                    request.descriptor.classifier,
                     "jar"
                 )().merge(), listOf()
             ),
