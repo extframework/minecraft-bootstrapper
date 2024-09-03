@@ -67,7 +67,7 @@ public class DefaultMinecraftResolver internal constructor(
     }
 
     private fun pathForVersion(version: String) =
-        basePath resolve "minecraft" resolve version
+        basePath resolve version
 
     override fun pathForDescriptor(descriptor: MinecraftDescriptor, classifier: String, type: String): Path {
         return pathForVersion(
