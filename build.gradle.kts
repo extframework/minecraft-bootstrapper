@@ -4,7 +4,7 @@ import dev.extframework.gradle.common.dm.jobs
 
 plugins {
     kotlin("jvm") version "2.0.0"
-    id("dev.extframework.common") version "1.0.21"
+    id("dev.extframework.common") version "1.0.23"
 }
 
 group = "dev.extframework"
@@ -14,7 +14,6 @@ dependencies {
     archives(configurationName = "api", mixin = true)
     commonUtil(configurationName = "api")
     objectContainer()
-    archiveMapper(proguard = true)
 
     jobs(logging = true, progressSimple = true, configurationName = "api")
     artifactResolver()
@@ -93,7 +92,7 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "dev.extframework.common")
 
-    version = "2.0.6-SNAPSHOT"
+    version = "2.0.7-SNAPSHOT"
 
     repositories {
         mavenLocal()
