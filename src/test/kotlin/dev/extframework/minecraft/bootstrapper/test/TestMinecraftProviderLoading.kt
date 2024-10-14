@@ -19,6 +19,7 @@ import dev.extframework.boot.monad.Tagged
 import dev.extframework.boot.monad.Tree
 import dev.extframework.boot.monad.removeIf
 import dev.extframework.common.util.readInputStream
+import dev.extframework.minecraft.bootstrapper.MinecraftProviderFinder
 import dev.extframework.minecraft.bootstrapper.MinecraftProviderRemoteLookup
 import dev.extframework.minecraft.bootstrapper.loadMinecraft
 import java.nio.file.Files
@@ -77,6 +78,11 @@ class TestMinecraftProviderLoading {
                 cache,
                 archiveGraph,
                 maven as MavenLikeResolver<ClassLoadedArchiveNode<SimpleMavenDescriptor>, *>,
+                object : MinecraftProviderFinder {
+                    override fun find(version: String): SimpleMavenDescriptor {
+                        return SimpleMavenDescriptor.parseDescription("dev.extframework.minecraft:minecraft-provider-def:2.0.8-SNAPSHOT")!!
+                    }
+                }
             )().merge()
 
             println("Back here")
@@ -96,6 +102,11 @@ class TestMinecraftProviderLoading {
     @Test
     fun `Test 1_21 load`() {
         loadMinecraft("1.21")
+    }
+
+    @Test
+    fun `Test 1_21_1 load`() {
+        loadMinecraft("1.21.1")
     }
 
     @Test

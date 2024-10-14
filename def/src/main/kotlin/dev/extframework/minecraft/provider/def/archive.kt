@@ -16,9 +16,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.extframework.archives.Archives
 import dev.extframework.boot.archive.*
-import dev.extframework.boot.loader.ArchiveResourceProvider
-import dev.extframework.boot.loader.DelegatingResourceProvider
-import dev.extframework.boot.loader.ResourceProvider
 import dev.extframework.boot.maven.MavenLikeResolver
 import dev.extframework.boot.monad.Tagged
 import dev.extframework.boot.monad.Tree
@@ -67,12 +64,17 @@ public class DefaultMinecraftResolver internal constructor(
     }
 
     private fun pathForVersion(version: String) =
-        basePath resolve version
+        basePath resolve "versions" resolve version
 
     override fun pathForDescriptor(descriptor: MinecraftDescriptor, classifier: String, type: String): Path {
         return pathForVersion(
             descriptor.version
-        ) resolve "minecraft-${descriptor.version}-$classifier.$type"
+        ) resolve "${descriptor.version}${
+            classifier
+                .takeUnless { it.startsWith("#MC") }
+                ?.let { "-$it" }
+                ?: ""
+        }.$type"
     }
 
     override fun createContext(settings: MinecraftRepositorySettings): ResolutionContext<MinecraftRepositorySettings, MinecraftArtifactRequest, MinecraftArtifactMetadata> {
@@ -83,13 +85,12 @@ public class DefaultMinecraftResolver internal constructor(
         artifact: Artifact<MinecraftArtifactMetadata>,
         helper: CacheHelper<MinecraftDescriptor>
     ): AsyncJob<Tree<Tagged<ArchiveData<*, *>, ArchiveNodeResolver<*, *, *, *, *>>>> = asyncJob {
-        helper.withResource("mappings.txt", artifact.metadata.mappings)
-        helper.withResource("launchmeta.json", Resource("<heap>") {
+        helper.withResource("#MC launchmeta.json", Resource("<heap>") {
             ByteArrayInputStream(jacksonObjectMapper().writeValueAsBytes(artifact.metadata.launchMetadata))
         })
-        helper.withResource("minecraft.jar", artifact.metadata.mcJar)
+        helper.withResource("#MC minecraft.jar", artifact.metadata.mcJar)
 
-        val assetsPath = pathForVersion(artifact.metadata.descriptor.version) resolve "assets"
+        val assetsPath = basePath resolve "assets"
 
         val assetsIndexesPath = assetsPath resolve "indexes"
         val assetsObjectsPath = assetsPath resolve "objects"
@@ -121,24 +122,16 @@ public class DefaultMinecraftResolver internal constructor(
         accessTree: ArchiveAccessTree,
         helper: ResolutionHelper
     ): Job<MinecraftNode> = job {
-        val ref = Archives.Finders.ZIP_FINDER.find(data.resources["minecraft.jar"]!!.path)
+        val ref = Archives.Finders.ZIP_FINDER.find(data.resources["#MC minecraft.jar"]!!.path)
 
         val metadata = jacksonObjectMapper().readValue<LaunchMetadata>(
-            data.resources["launchmeta.json"]!!.path.toFile()
+            data.resources["#MC launchmeta.json"]!!.path.toFile()
         )
-        val mappings = data.resources["mappings.txt"]!!.path
 
         MinecraftNode(
             data.descriptor,
             accessTree,
-            DelegatingResourceProvider(
-                accessTree.targets
-                    .map(ArchiveTarget::relationship)
-                    .map(ArchiveRelationship::node)
-                    .filterIsInstance<MinecraftLibNode>()
-                    .map(MinecraftLibNode::resources) + ArchiveResourceProvider(ref)
-            ),
-            mappings,
+            ref,
             MinecraftNode.GameRuntimeInfo(
                 metadata.mainClass,
                 pathForVersion(data.descriptor.version) resolve "assets",
@@ -146,16 +139,6 @@ public class DefaultMinecraftResolver internal constructor(
                 pathForVersion(data.descriptor.version)
             )
         )
-    }
-}
-
-public data class MinecraftLibNode(
-    override val descriptor: SimpleMavenDescriptor,
-    val resources: ResourceProvider
-) : ArchiveNode<SimpleMavenDescriptor> {
-    override val access: ArchiveAccessTree = object : ArchiveAccessTree {
-        override val descriptor: ArtifactMetadata.Descriptor = this@MinecraftLibNode.descriptor
-        override val targets: List<ArchiveTarget> = listOf()
     }
 }
 
@@ -207,7 +190,11 @@ public class MinecraftLibResolver : MavenLikeResolver<MinecraftLibNode, SimpleMa
 
         MinecraftLibNode(
             data.descriptor,
-            ArchiveResourceProvider(archive)
+            archive,
+            object : ArchiveAccessTree {
+                override val descriptor: ArtifactMetadata.Descriptor = data.descriptor
+                override val targets: List<ArchiveTarget> = listOf()
+            }
         )
     }
 }
