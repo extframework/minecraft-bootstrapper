@@ -92,7 +92,7 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "dev.extframework.common")
 
-    version = "2.0.8-SNAPSHOT"
+    version = "2.0.9-SNAPSHOT"
 
     repositories {
         mavenLocal()

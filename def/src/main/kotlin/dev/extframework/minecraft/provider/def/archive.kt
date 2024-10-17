@@ -134,9 +134,9 @@ public class DefaultMinecraftResolver internal constructor(
             ref,
             MinecraftNode.GameRuntimeInfo(
                 metadata.mainClass,
-                pathForVersion(data.descriptor.version) resolve "assets",
+                basePath resolve "assets",
                 metadata.assetIndex.id,
-                pathForVersion(data.descriptor.version)
+                basePath
             )
         )
     }

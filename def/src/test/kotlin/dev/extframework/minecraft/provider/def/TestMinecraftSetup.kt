@@ -6,6 +6,7 @@ import dev.extframework.boot.archive.ArchiveGraph
 import dev.extframework.minecraft.bootstrapper.MinecraftArtifactRequest
 import dev.extframework.minecraft.bootstrapper.MinecraftDescriptor
 import dev.extframework.minecraft.bootstrapper.MinecraftRepositorySettings
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.nio.file.Path
 import kotlin.test.Test
@@ -38,8 +39,8 @@ class TestMinecraftSetup {
                 resolver
             )().merge()
 
-            assertTrue(
-                node.resources.findResources("net/minecraft/client/main/Main.class").toList().isNotEmpty()
+            assertNotNull(
+                node.archive.reader["net/minecraft/client/main/Main.class"]
             )
         }
     }
