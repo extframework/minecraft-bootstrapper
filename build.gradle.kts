@@ -4,7 +4,7 @@ import dev.extframework.gradle.common.dm.jobs
 
 plugins {
     kotlin("jvm") version "2.0.0"
-    id("dev.extframework.common") version "1.0.23"
+    id("dev.extframework.common") version "1.0.31"
 }
 
 group = "dev.extframework"
@@ -92,10 +92,9 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "dev.extframework.common")
 
-    version = "2.0.9-SNAPSHOT"
+    version = "2.0.11-SNAPSHOT"
 
     repositories {
-        mavenLocal()
         mavenCentral()
         extFramework()
     }
@@ -133,5 +132,8 @@ allprojects {
         implementation(kotlin("stdlib"))
         implementation(kotlin("reflect"))
         testImplementation(kotlin("test"))
+    }
+    java {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(8))
     }
 }

@@ -22,11 +22,12 @@ public data class MinecraftNode(
         public val assetsPath: Path,
         public val assetsName: String,
         public val gameDir: Path,
+        public val nativesPath: Path
     )
 }
 
 public data class MinecraftLibNode(
-    override val descriptor: SimpleMavenDescriptor,
+    override val descriptor: MinecraftLibDescriptor,
     val archive: ArchiveReference,
     override val access: ArchiveAccessTree,
-) : ArchiveNode<SimpleMavenDescriptor>
+) : ArchiveNode<MinecraftLibDescriptor>

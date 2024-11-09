@@ -3,13 +3,16 @@ import dev.extframework.gradle.common.dm.artifactResolver
 import dev.extframework.gradle.common.dm.jobs
 import dev.extframework.gradle.common.dm.resourceApi
 
+repositories {
+    mavenLocal()
+}
+
 group = "dev.extframework.minecraft"
 
 dependencies {
     boot()
     archives()
     commonUtil()
-    archiveMapper(proguard = true)
     launcherMetaHandler()
     resourceApi()
 

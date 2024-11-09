@@ -9,12 +9,13 @@ import dev.extframework.minecraft.bootstrapper.MinecraftRepositorySettings
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.test.Test
 
 class TestMinecraftSetup {
     @Test
     fun `Test load mc ref`() {
-        val cachePath = Path.of("test-run").toAbsolutePath()
+        val cachePath = Path("test-run").toAbsolutePath()
         println(cachePath)
 
         val provider = DefaultMinecraftProvider()
@@ -25,7 +26,7 @@ class TestMinecraftSetup {
                 archiveGraph,
             )
 
-            val descriptor = MinecraftDescriptor("1.21")
+            val descriptor = MinecraftDescriptor("1.8.9")
             archiveGraph.cache(
                 MinecraftArtifactRequest(
                     descriptor

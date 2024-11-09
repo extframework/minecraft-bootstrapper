@@ -2,8 +2,10 @@ package dev.extframework.minecraft.bootstrapper
 
 import com.durganmcbroom.artifact.resolver.ArtifactMetadata
 import com.durganmcbroom.artifact.resolver.ArtifactRequest
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySettings
 import com.durganmcbroom.artifact.resolver.simple.maven.layout.SimpleMavenDefaultLayout
+import com.durganmcbroom.resources.Resource
 import com.durganmcbroom.resources.ResourceAlgorithm
 
 public data class MinecraftArtifactRequest(
@@ -32,3 +34,13 @@ public object MinecraftRepositorySettings : SimpleMavenRepositorySettings(
     ResourceAlgorithm.SHA1,
     requireResourceVerification = true
 )
+
+public typealias MinecraftLibDescriptor = SimpleMavenDescriptor
+
+
+
+//public data class MinecraftLibDescriptor(
+//    val resource: Resource,
+//    val path: Path,
+//    override val name: String
+//) : ArtifactMetadata.Descriptor

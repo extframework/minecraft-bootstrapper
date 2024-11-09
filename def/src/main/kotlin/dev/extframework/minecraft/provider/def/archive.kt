@@ -4,7 +4,7 @@ import com.durganmcbroom.artifact.resolver.Artifact
 import com.durganmcbroom.artifact.resolver.ArtifactMetadata
 import com.durganmcbroom.artifact.resolver.ResolutionContext
 import com.durganmcbroom.artifact.resolver.createContext
-import com.durganmcbroom.artifact.resolver.simple.maven.*
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.async.AsyncJob
 import com.durganmcbroom.jobs.async.asyncJob
@@ -16,13 +16,16 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.extframework.archives.Archives
 import dev.extframework.boot.archive.*
-import dev.extframework.boot.maven.MavenLikeResolver
 import dev.extframework.boot.monad.Tagged
 import dev.extframework.boot.monad.Tree
+import dev.extframework.boot.util.mapOfNonNullValues
 import dev.extframework.boot.util.requireKeyInDescriptor
+import dev.extframework.common.util.copyTo
+import dev.extframework.common.util.make
 import dev.extframework.common.util.resolve
 import dev.extframework.launchermeta.handler.DefaultMetadataProcessor
 import dev.extframework.launchermeta.handler.LaunchMetadata
+import dev.extframework.launchermeta.handler.MetadataLibrary
 import dev.extframework.launchermeta.handler.OsType
 import dev.extframework.minecraft.bootstrapper.*
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -30,6 +33,7 @@ import kotlinx.coroutines.awaitAll
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.Executors
 
 public const val MINECRAFT_RESOURCES_URL: String = "https://resources.download.minecraft.net"
@@ -103,12 +107,14 @@ public class DefaultMinecraftResolver internal constructor(
             assetsPool.asCoroutineDispatcher(),
         ).awaitAll()
 
-        val libraries = DefaultMetadataProcessor()
+        val metadataProcessor = DefaultMetadataProcessor()
+        val libraries = metadataProcessor
             .deriveDependencies(OsType.type, artifact.metadata.launchMetadata)
 
-        val parents = helper.loadLibs(
+        val parents = helper.cacheLibs(
             libraries,
-            libResolver
+            metadataProcessor,
+            libResolver,
         )().merge()
 
         helper.newData(
@@ -136,22 +142,60 @@ public class DefaultMinecraftResolver internal constructor(
                 metadata.mainClass,
                 basePath resolve "assets",
                 metadata.assetIndex.id,
-                basePath
+                basePath,
+                libResolver.extractPath,
             )
         )
     }
 }
 
-public class MinecraftLibResolver : MavenLikeResolver<MinecraftLibNode, SimpleMavenArtifactMetadata> {
-    override val metadataType: Class<SimpleMavenArtifactMetadata> = SimpleMavenArtifactMetadata::class.java
+public class MinecraftLibResolver(
+    public val extractPath: Path,
+) : ArchiveNodeResolver<MinecraftLibDescriptor, MinecraftLibArtifactRequest, MinecraftLibNode, MinecraftRepositorySettings, MinecraftLibArtifactMetadata> {
+    override val metadataType: Class<MinecraftLibArtifactMetadata> = MinecraftLibArtifactMetadata::class.java
     override val name: String = "minecraft-libs"
     override val nodeType: Class<in MinecraftLibNode> = MinecraftLibNode::class.java
+    private val mapper = jacksonObjectMapper()
+
+    override fun deserializeDescriptor(
+        descriptor: Map<String, String>,
+        trace: ArchiveTrace
+    ): Result<SimpleMavenDescriptor> = result {
+        SimpleMavenDescriptor(
+            descriptor.requireKeyInDescriptor("group") { trace },
+            descriptor.requireKeyInDescriptor("artifact") { trace },
+            descriptor.requireKeyInDescriptor("version") { trace },
+            descriptor["classifier"]
+        )
+    }
+
+    override fun pathForDescriptor(descriptor: MinecraftLibDescriptor, classifier: String, type: String): Path {
+        return Paths.get(
+            descriptor.group.replace('.', File.separatorChar),
+            descriptor.artifact,
+            descriptor.version,
+            descriptor.classifier ?: "",
+            "${descriptor.artifact}-${descriptor.version}-$classifier.$type"
+        )
+    }
+
+    override fun serializeDescriptor(descriptor: SimpleMavenDescriptor): Map<String, String> {
+        return mapOfNonNullValues(
+            "group" to descriptor.group,
+            "artifact" to descriptor.artifact,
+            "version" to descriptor.version,
+            "classifier" to descriptor.classifier
+        )
+    }
 
     override fun cache(
-        artifact: Artifact<SimpleMavenArtifactMetadata>,
-        helper: CacheHelper<SimpleMavenDescriptor>
+        artifact: Artifact<MinecraftLibArtifactMetadata>,
+        helper: CacheHelper<MinecraftLibDescriptor>
     ): AsyncJob<Tree<Tagged<ArchiveData<*, *>, ArchiveNodeResolver<*, *, *, *, *>>>> = asyncJob {
-        helper.withResource("jar.jar", artifact.metadata.resource)
+        helper.withResource("jar.jar", artifact.metadata.jar.merge())
+        helper.withResource("lib.json", Resource("<heap>") {
+            ByteArrayInputStream(mapper.writeValueAsBytes(artifact.metadata.library))
+        })
 
         helper.newData(
             artifact.metadata.descriptor,
@@ -163,29 +207,38 @@ public class MinecraftLibResolver : MavenLikeResolver<MinecraftLibNode, SimpleMa
         )
     }
 
-    override fun pathForDescriptor(descriptor: SimpleMavenDescriptor, classifier: String, type: String): Path {
-        return Path.of(
-            descriptor.group.replace('.', File.separatorChar),
-            descriptor.artifact,
-            descriptor.version,
-            descriptor.classifier ?: "",
-            "${descriptor.artifact}-${descriptor.version}-$classifier.$type"
-        )
-    }
-
     override fun createContext(
-        settings: SimpleMavenRepositorySettings
-    ): ResolutionContext<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, SimpleMavenArtifactMetadata> {
-        return MinecraftLibResolutionContext()
+        settings: MinecraftRepositorySettings,
+    ): ResolutionContext<MinecraftRepositorySettings, MinecraftLibArtifactRequest, MinecraftLibArtifactMetadata> {
+        return MinecraftLibRepositoryFactory.createContext(settings)
     }
 
     override fun load(
-        data: ArchiveData<SimpleMavenDescriptor, CachedArchiveResource>,
+        data: ArchiveData<MinecraftLibDescriptor, CachedArchiveResource>,
         accessTree: ArchiveAccessTree,
         helper: ResolutionHelper
     ): Job<MinecraftLibNode> = job {
         val archive = data.resources["jar.jar"]!!.let {
             Archives.find(it.path, Archives.Finders.ZIP_FINDER)
+        }
+        val library = data.resources["lib.json"]!!.let {
+            mapper.readValue<MetadataLibrary>(it.path.toFile())
+        }
+
+        val extract = library.extract
+        if (extract != null) {
+            archive.reader.entries()
+                .filterNot { entry ->
+                    extract.exclude.any { exclude ->
+                        entry.name.startsWith(exclude)
+                    }
+                }.forEach {
+                    val path = extractPath resolve it.name
+
+                    if (path.make()) {
+                        it.resource.copyTo(path)
+                    }
+                }
         }
 
         MinecraftLibNode(
@@ -195,29 +248,6 @@ public class MinecraftLibResolver : MavenLikeResolver<MinecraftLibNode, SimpleMa
                 override val descriptor: ArtifactMetadata.Descriptor = data.descriptor
                 override val targets: List<ArchiveTarget> = listOf()
             }
-        )
-    }
-}
-
-internal class MinecraftLibResolutionContext :
-    ResolutionContext<SimpleMavenRepositorySettings, SimpleMavenArtifactRequest, SimpleMavenArtifactMetadata>(
-        SimpleMaven.createNew(minecraftRepo)
-    ) {
-    override fun getAndResolveAsync(
-        request: SimpleMavenArtifactRequest
-    ): AsyncJob<Artifact<SimpleMavenArtifactMetadata>> = asyncJob {
-        Artifact(
-            SimpleMavenArtifactMetadata(
-                request.descriptor,
-                repository.settings.layout.resourceOf(
-                    request.descriptor.group,
-                    request.descriptor.artifact,
-                    request.descriptor.version,
-                    request.descriptor.classifier,
-                    "jar"
-                )().merge(), listOf()
-            ),
-            listOf()
         )
     }
 }

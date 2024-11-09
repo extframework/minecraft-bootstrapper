@@ -1,14 +1,13 @@
 package dev.extframework.minecraft.provider.def
 
-import com.durganmcbroom.artifact.resolver.ArtifactMetadata
-import com.durganmcbroom.artifact.resolver.ArtifactRepository
-import com.durganmcbroom.artifact.resolver.RepositoryFactory
+import com.durganmcbroom.artifact.resolver.*
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.job
 import com.durganmcbroom.resources.Resource
 import dev.extframework.launchermeta.handler.*
 import dev.extframework.minecraft.bootstrapper.MinecraftArtifactRequest
 import dev.extframework.minecraft.bootstrapper.MinecraftDescriptor
+import dev.extframework.minecraft.bootstrapper.MinecraftLibDescriptor
 import dev.extframework.minecraft.bootstrapper.MinecraftRepositorySettings
 
 public data class MinecraftArtifactMetadata(
@@ -16,7 +15,6 @@ public data class MinecraftArtifactMetadata(
 
     val mcJar: Resource,
     val launchMetadata: LaunchMetadata,
-    val mappings: Resource,
 
     override val parents: List<Nothing>
 ) : ArtifactMetadata<MinecraftDescriptor, Nothing>(
@@ -39,15 +37,10 @@ public class MinecraftArtifactRepository :
             ?.toResource()?.merge()
             ?: throw IllegalArgumentException("Cant find client in launch metadata?")
 
-        val mappings = metadata.downloads[LaunchMetadataDownloadType.CLIENT_MAPPINGS]
-            ?.toResource()?.merge()
-            ?: throw IllegalArgumentException("Cant find client mappings in launch metadata?")
-
         MinecraftArtifactMetadata(
             request.descriptor,
             mcJar,
             metadata,
-            mappings,
             listOf()
         )
     }
@@ -56,5 +49,47 @@ public class MinecraftArtifactRepository :
 public object MinecraftRepositoryFactory : RepositoryFactory<MinecraftRepositorySettings, MinecraftArtifactRepository> {
     override fun createNew(settings: MinecraftRepositorySettings): MinecraftArtifactRepository {
         return MinecraftArtifactRepository()
+    }
+}
+
+public data class MinecraftLibArtifactMetadata(
+    override val descriptor: MinecraftLibDescriptor,
+
+    val library: MetadataLibrary,
+    val artifact: McArtifact,
+) : ArtifactMetadata<MinecraftLibDescriptor, Nothing>(
+    descriptor, listOf()
+) {
+    val jar: Result<Resource>
+        get() = artifact.toResource()
+
+    override val parents: List<Nothing> = listOf()
+}
+
+public data class MinecraftLibArtifactRequest(
+    override val descriptor: MinecraftLibDescriptor,
+    val library: MetadataLibrary,
+) : ArtifactRequest<MinecraftLibDescriptor>
+
+public object MinecraftLibArtifactRepository :
+    ArtifactRepository<MinecraftRepositorySettings, MinecraftLibArtifactRequest, MinecraftLibArtifactMetadata> {
+    override val factory: MinecraftLibRepositoryFactory = MinecraftLibRepositoryFactory
+    override val name: String = "minecraft libs"
+    override val settings: MinecraftRepositorySettings = MinecraftRepositorySettings
+    private val metadataProcessor = DefaultMetadataProcessor()
+
+    override fun get(request: MinecraftLibArtifactRequest): Job<MinecraftLibArtifactMetadata> = job {
+        MinecraftLibArtifactMetadata(
+            request.descriptor,
+            request.library,
+            metadataProcessor.deriveArtifacts(OsType.type, request.library)
+                .firstOrNull() ?: throw MetadataRequestException.MetadataNotFound(request.descriptor, ".jar", Exception("No artifact present in the given metadata library (natives nor artifact)")),
+        )
+    }
+}
+
+public object MinecraftLibRepositoryFactory : RepositoryFactory<MinecraftRepositorySettings, MinecraftLibArtifactRepository> {
+    override fun createNew(settings: MinecraftRepositorySettings): MinecraftLibArtifactRepository {
+        return MinecraftLibArtifactRepository
     }
 }

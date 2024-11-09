@@ -1,6 +1,6 @@
 package dev.extframework.minecraft.provider.def
 
-import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenArtifactRequest
+import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenDescriptor
 import com.durganmcbroom.jobs.JobScope
 import com.durganmcbroom.jobs.async.asyncJob
 import com.durganmcbroom.jobs.async.mapAsync
@@ -9,32 +9,35 @@ import com.durganmcbroom.resources.ResourceAlgorithm
 import com.durganmcbroom.resources.VerifiedResource
 import com.durganmcbroom.resources.toResource
 import dev.extframework.boot.archive.CacheHelper
+import dev.extframework.common.util.Hex
 import dev.extframework.common.util.copyTo
 import dev.extframework.common.util.make
 import dev.extframework.common.util.resolve
-import dev.extframework.launchermeta.handler.LaunchMetadata
-import dev.extframework.launchermeta.handler.MetadataLibrary
-import dev.extframework.launchermeta.handler.assetIndex
-import dev.extframework.launchermeta.handler.parseAssetIndex
-import dev.extframework.minecraft.bootstrapper.minecraftRepo
-import kotlinx.coroutines.*
+import dev.extframework.launchermeta.handler.*
+import dev.extframework.minecraft.bootstrapper.MinecraftRepositorySettings
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.withContext
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
 import kotlin.math.floor
 
-internal fun CacheHelper<*>.loadLibs(
+internal fun CacheHelper<*>.cacheLibs(
     libraries: List<MetadataLibrary>,
-    maven: MinecraftLibResolver,
+    processor: LaunchMetadataProcessor,
+    resolver: MinecraftLibResolver,
 ) = asyncJob {
-    libraries.mapAsync { library ->
+    libraries.first().extract
+
+    libraries.mapAsync { lib ->
         cache(
-            SimpleMavenArtifactRequest(
-                library.name,
-                isTransitive = false,
+            MinecraftLibArtifactRequest(
+                SimpleMavenDescriptor.parseDescription(lib.name)!!,
+                lib,
             ),
-            minecraftRepo,
-            maven
+            MinecraftRepositorySettings,
+            resolver
         )().merge()
     }.awaitAll()
 }
@@ -70,7 +73,7 @@ internal suspend fun JobScope.downloadAssets(
                 VerifiedResource(
                     unverifiedResource,
                     ResourceAlgorithm.SHA1,
-                    HexFormat.of().parseHex(asset.checksum),
+                    Hex.parseHex(asset.checksum),
                 ) copyTo assetPath
 
                 info(
@@ -104,7 +107,6 @@ internal fun convertBytesToPrettyString(bytes: Long): String {
     return String.format("%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
 }
 
-//
 internal fun convertMillisToTimeSpan(millis: Long): String {
     var remainingMillis = millis
 
