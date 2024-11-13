@@ -88,7 +88,7 @@ public class DefaultMinecraftResolver internal constructor(
     override fun cache(
         artifact: Artifact<MinecraftArtifactMetadata>,
         helper: CacheHelper<MinecraftDescriptor>
-    ): AsyncJob<Tree<Tagged<ArchiveData<*, *>, ArchiveNodeResolver<*, *, *, *, *>>>> = asyncJob {
+    ): AsyncJob<Tree<Tagged<IArchive<*>, ArchiveNodeResolver<*, *, *, *, *>>>> = asyncJob {
         helper.withResource("#MC launchmeta.json", Resource("<heap>") {
             ByteArrayInputStream(jacksonObjectMapper().writeValueAsBytes(artifact.metadata.launchMetadata))
         })
@@ -191,7 +191,7 @@ public class MinecraftLibResolver(
     override fun cache(
         artifact: Artifact<MinecraftLibArtifactMetadata>,
         helper: CacheHelper<MinecraftLibDescriptor>
-    ): AsyncJob<Tree<Tagged<ArchiveData<*, *>, ArchiveNodeResolver<*, *, *, *, *>>>> = asyncJob {
+    ): AsyncJob<Tree<Tagged<IArchive<*>, ArchiveNodeResolver<*, *, *, *, *>>>> = asyncJob {
         helper.withResource("jar.jar", artifact.metadata.jar.merge())
         helper.withResource("lib.json", Resource("<heap>") {
             ByteArrayInputStream(mapper.writeValueAsBytes(artifact.metadata.library))

@@ -10,7 +10,7 @@ repositories {
 group = "dev.extframework.minecraft"
 
 dependencies {
-    boot()
+    boot(version = "3.4-SNAPSHOT")
     archives()
     commonUtil()
     launcherMetaHandler()
