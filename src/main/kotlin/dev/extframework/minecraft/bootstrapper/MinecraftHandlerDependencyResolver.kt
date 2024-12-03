@@ -25,6 +25,7 @@ import java.net.URL
 import java.nio.channels.Channels
 import java.nio.file.Path
 import java.util.*
+import kotlin.io.path.exists
 
 private const val PROPERTY_FILE_LOCATION = "META-INF/minecraft-provider.properties"
 
@@ -38,7 +39,7 @@ public interface MinecraftProviderFinder {
 
 public class MinecraftProviderRemoteLookup(
     cachePath: Path,
-    resource: Resource = URL("https://static.extframework.dev/mc-provider-version-info.json").toResource()
+    resource: URL = URL("https://static.extframework.dev/mc-provider-version-info.json")
 ) : MinecraftProviderFinder {
     private val info: ProviderVersionInfo
 
@@ -50,13 +51,19 @@ public class MinecraftProviderRemoteLookup(
     init {
         val path = cachePath resolve "mc-provider-version-info.json"
 
-        if (path.make()) Channels.newChannel(resource.openStream())
-            .use { cin ->
-                FileOutputStream(path.toFile()).use { fout: FileOutputStream ->
-                    fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
+        try {
+            Channels.newChannel(resource.toResource().openStream())
+                .use { cin ->
+                    path.make()
+                    FileOutputStream(path.toFile()).use { fout: FileOutputStream ->
+                        fout.channel.transferFrom(cin, 0, Long.MAX_VALUE)
+                    }
                 }
+        } catch (e: Throwable) {
+            if (!path.exists()) {
+                throw e
             }
-
+        }
 
         val mapper = jacksonObjectMapper()
         info = mapper.readValue<ProviderVersionInfo>(path.toFile())

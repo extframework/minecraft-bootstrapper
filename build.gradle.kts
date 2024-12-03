@@ -4,13 +4,13 @@ import dev.extframework.gradle.common.dm.jobs
 
 plugins {
     kotlin("jvm") version "2.0.0"
-    id("dev.extframework.common") version "1.0.35"
+    id("dev.extframework.common") version "1.0.38"
 }
 
 group = "dev.extframework"
 
 dependencies {
-    boot(version = "3.4-SNAPSHOT")
+    boot()
     archives(configurationName = "api", mixin = true)
     commonUtil(configurationName = "api")
     objectContainer()
@@ -92,10 +92,9 @@ allprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "dev.extframework.common")
 
-    version = "2.0.12-SNAPSHOT"
+    version = "2.0.13-SNAPSHOT"
 
     repositories {
-        mavenLocal()
         mavenCentral()
         extFramework()
     }

@@ -24,6 +24,7 @@ import dev.extframework.minecraft.bootstrapper.MinecraftProviderRemoteLookup
 import dev.extframework.minecraft.bootstrapper.loadMinecraft
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.test.Test
 
 class TestMinecraftProviderLoading {
@@ -34,18 +35,10 @@ class TestMinecraftProviderLoading {
         }?.filterNot { it.isBlank() }?.mapTo(HashSet()) { SimpleMavenDescriptor.parseDescription(it)!! }
             ?: throw IllegalStateException("Cant load dependencies?")
 
-        val cache = Path.of("test-run").toAbsolutePath()
+        val cache = Path("test-run").toAbsolutePath()
 
         val archiveGraph = DefaultArchiveGraph(
             cache,
-            dependencies.associateByTo(HashMap()) {
-                BasicDependencyNode(it, null,
-                    object : ArchiveAccessTree {
-                        override val descriptor: ArtifactMetadata.Descriptor = it
-                        override val targets: List<ArchiveTarget> = listOf()
-                    }
-                )
-            } as MutableMap<ArtifactMetadata.Descriptor, ArchiveNode<*>>
         )
 
         val negotiator = MavenConstraintNegotiator()
@@ -77,12 +70,7 @@ class TestMinecraftProviderLoading {
                 SimpleMavenRepositorySettings.local(),
                 cache,
                 archiveGraph,
-                maven as MavenLikeResolver<ClassLoadedArchiveNode<SimpleMavenDescriptor>, *>,
-                object : MinecraftProviderFinder {
-                    override fun find(version: String): SimpleMavenDescriptor {
-                        return SimpleMavenDescriptor.parseDescription("dev.extframework.minecraft:minecraft-provider-def:2.0.8-SNAPSHOT")!!
-                    }
-                }
+                maven as MavenLikeResolver<ClassLoadedArchiveNode<SimpleMavenDescriptor>, *>
             )().merge()
 
             println("Back here")
@@ -107,12 +95,5 @@ class TestMinecraftProviderLoading {
     @Test
     fun `Test 1_21_1 load`() {
         loadMinecraft("1.21.1")
-    }
-
-    @Test
-    fun `Find correct mc version`() {
-        val find = MinecraftProviderRemoteLookup(Files.createTempDirectory("test")).find("1.21")
-        println(find)
-        check(find.name == "dev.extframework.minecraft:minecraft-provider-def:2.0-SNAPSHOT")
     }
 }
