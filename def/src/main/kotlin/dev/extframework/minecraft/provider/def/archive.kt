@@ -236,7 +236,11 @@ public class MinecraftLibResolver(
                     val path = extractPath resolve it.name
 
                     if (path.make()) {
-                        it.resource.copyTo(path)
+                        it.open().use { fin ->
+                            path.toFile().outputStream().use {fout ->
+                                fin.copyTo(fout)
+                            }
+                        }
                     }
                 }
         }

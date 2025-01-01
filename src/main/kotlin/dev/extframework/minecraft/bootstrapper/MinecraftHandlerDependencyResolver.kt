@@ -8,9 +8,6 @@ import com.durganmcbroom.artifact.resolver.simple.maven.SimpleMavenRepositorySet
 import com.durganmcbroom.jobs.Job
 import com.durganmcbroom.jobs.JobName
 import com.durganmcbroom.jobs.job
-import com.durganmcbroom.resources.Resource
-import com.durganmcbroom.resources.openStream
-import com.durganmcbroom.resources.toResource
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.extframework.boot.archive.ArchiveException
@@ -52,7 +49,7 @@ public class MinecraftProviderRemoteLookup(
         val path = cachePath resolve "mc-provider-version-info.json"
 
         try {
-            Channels.newChannel(resource.toResource().openStream())
+            Channels.newChannel(resource.openStream())
                 .use { cin ->
                     path.make()
                     FileOutputStream(path.toFile()).use { fout: FileOutputStream ->

@@ -29,8 +29,9 @@ public object MinecraftRepositorySettings : SimpleMavenRepositorySettings(
         ResourceAlgorithm.SHA1,
         releasesEnabled = true,
         snapshotsEnabled = true,
-        requireResourceVerification = true
-    ),
+    ) { _, _ ->
+        true
+    },
     ResourceAlgorithm.SHA1,
     requireResourceVerification = true
 )

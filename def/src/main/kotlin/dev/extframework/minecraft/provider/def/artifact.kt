@@ -2,6 +2,8 @@ package dev.extframework.minecraft.provider.def
 
 import com.durganmcbroom.artifact.resolver.*
 import com.durganmcbroom.jobs.Job
+import com.durganmcbroom.jobs.async.AsyncJob
+import com.durganmcbroom.jobs.async.asyncJob
 import com.durganmcbroom.jobs.job
 import com.durganmcbroom.resources.Resource
 import dev.extframework.launchermeta.handler.*
@@ -27,7 +29,7 @@ public class MinecraftArtifactRepository :
     override val name: String = "minecraft"
     override val settings: MinecraftRepositorySettings = MinecraftRepositorySettings
 
-    override fun get(request: MinecraftArtifactRequest): Job<MinecraftArtifactMetadata> = job {
+    override fun get(request: MinecraftArtifactRequest): AsyncJob<MinecraftArtifactMetadata> = asyncJob() {
         val manifest = loadVersionManifest().find(request.descriptor.version)
             ?: throw IllegalStateException("Failed to find minecraft version: '${request.descriptor.version}'. Looked in: 'https://launchermeta.mojang.com/mc/game/version_manifest_v2.json'.")
 
@@ -78,17 +80,22 @@ public object MinecraftLibArtifactRepository :
     override val settings: MinecraftRepositorySettings = MinecraftRepositorySettings
     private val metadataProcessor = DefaultMetadataProcessor()
 
-    override fun get(request: MinecraftLibArtifactRequest): Job<MinecraftLibArtifactMetadata> = job {
+    override fun get(request: MinecraftLibArtifactRequest): AsyncJob<MinecraftLibArtifactMetadata> = asyncJob {
         MinecraftLibArtifactMetadata(
             request.descriptor,
             request.library,
             metadataProcessor.deriveArtifacts(OsType.type, request.library)
-                .firstOrNull() ?: throw MetadataRequestException.MetadataNotFound(request.descriptor, ".jar", Exception("No artifact present in the given metadata library (natives nor artifact)")),
+                .firstOrNull() ?: throw MetadataRequestException.MetadataNotFound(
+                request.descriptor,
+                ".jar",
+                Exception("No artifact present in the given metadata library (natives nor artifact)")
+            ),
         )
     }
 }
 
-public object MinecraftLibRepositoryFactory : RepositoryFactory<MinecraftRepositorySettings, MinecraftLibArtifactRepository> {
+public object MinecraftLibRepositoryFactory :
+    RepositoryFactory<MinecraftRepositorySettings, MinecraftLibArtifactRepository> {
     override fun createNew(settings: MinecraftRepositorySettings): MinecraftLibArtifactRepository {
         return MinecraftLibArtifactRepository
     }
